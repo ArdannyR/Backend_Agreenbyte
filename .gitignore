@@ -1,0 +1,8 @@
+# Ignorar dependencias en cualquier carpeta
+node_modules/
+
+# Logs
+npm-debug.log
+
+# Archivos de build (para el frontend)
+dist/
