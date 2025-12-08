@@ -59,7 +59,7 @@ export const emailRegistro = async (datos) => {
   const { email, nombre, token } = datos;
 
   await enviarCorreoHibrido({
-    from: '"Agreenbyte - Administrador" <no-reply@agreenbyte.com>',
+    from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
     to: email,
     subject: "Agreenbyte - Comprueba tu cuenta",
     text: "Comprueba tu cuenta en Agreenbyte",
@@ -76,7 +76,7 @@ export const emailOlvidePassword = async (datos) => {
   const { email, nombre, token } = datos;
 
   await enviarCorreoHibrido({
-    from: '"Agreenbyte - Administrador" <no-reply@agreenbyte.com>',
+    from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
     to: email,
     subject: "Agreenbyte - Reestablece tu Password",
     text: "Reestablece tu Password",
