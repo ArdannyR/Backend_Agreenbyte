@@ -1,7 +1,6 @@
 import Agricultor from '../models/Agricultor.js';
 import { generarId, generarJWT } from '../helpers/generarToken.js';
-import emailRegistro from '../helpers/emailRegistro.js';
-import emailOlvidePassword from '../helpers/emailOlvidePassword.js';
+import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 
 const registrar = async (req, res) => {
   const { nombre, email, password } = req.body;
