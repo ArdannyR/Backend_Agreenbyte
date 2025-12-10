@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import conectarDB from './config/db.js';
 import agricultorRoutes from './routes/agricultorRoutes.js'
+import huertoRoutes from './routes/huertoRoutes.js';
 
 // Configura dotenv para cargar variables de entorno
 dotenv.config();
@@ -28,6 +29,7 @@ app.use(express.json());
 // Definir el puerto
 const PORT = process.env.PORT || 4000;
 app.use('/api/agricultores', agricultorRoutes);
+app.use('/api/huertos', huertoRoutes); 
 
 // Ruta de prueba
 app.get('/', (req, res) => {
