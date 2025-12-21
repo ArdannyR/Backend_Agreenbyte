@@ -12,20 +12,25 @@ const huertoSchema = mongoose.Schema(
       required: true,
       trim: true,
     },
-    // Sugerencia: Ubicación física del huerto
     ubicacion: {
       type: String,
       trim: true,
       default: ''
     },
-    // Datos de sensores (pueden actualizarse frecuentemente)
-    temperatura: {
-      type: Number,
-      default: 0
+    codigoDispositivo: {
+      type: String,
+      required: true,     
+      unique: true,       //No pueden haber dos huertos con el mismo chip
+      trim: true
     },
-    humedad: {
-      type: Number,
-      default: 0
+    // Datos de sensores
+    temperatura: { 
+      type: Number, 
+      default: 0 
+    },
+    humedad: { 
+      type: Number, 
+      default: 0 
     },
     // Sugerencia: Fecha en que se sembró para calcular tiempos de cosecha
     fechaSiembra: {
