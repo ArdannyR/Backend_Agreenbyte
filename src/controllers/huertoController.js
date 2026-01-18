@@ -1,4 +1,5 @@
 import Huerto from '../models/Huerto.js';
+import Agricultor from '../models/Agricultor.js';
 
 const agregarHuerto = async (req, res) => {
   const huerto = new Huerto(req.body);
@@ -18,9 +19,22 @@ const agregarHuerto = async (req, res) => {
 };
 
 const obtenerHuertos = async (req, res) => {
-  // Cambiado .where('agricultor').equals(req.agricultor) -> .where('desarrollador').equals(req.desarrollador)
-  const huertos = await Huerto.find().where('desarrollador').equals(req.desarrollador);
-  res.json(huertos);
+  // CASO 1: Petición hecha por el DUEÑO (Desarrollador)
+  if (req.desarrollador) {
+    const huertos = await Huerto.find().where('desarrollador').equals(req.desarrollador);
+    return res.json(huertos);
+  }
+
+  // CASO 2: Petición hecha por el AGRICULTOR
+  if (req.agricultor) {
+    // Busca huertos donde mi ID de agricultor esté en la lista permitida
+    const huertos = await Huerto.find({
+      agricultores: { $in: [req.agricultor._id] }
+    });
+    return res.json(huertos);
+  }
+  
+  return res.json([]); // Si no es ninguno, retorna vacío
 };
 
 const obtenerHuerto = async (req, res) => {
@@ -119,11 +133,45 @@ const actualizarDatosSensores = async (req, res) => {
   res.json({ msg: 'Datos actualizados correctamente' });
 };
 
+const agregarAgricultor = async (req, res) => {
+  const { id } = req.params; // ID del Huerto
+  const { email } = req.body; // Email del Agricultor a vincular
+
+  // 1. Verificar que el huerto existe
+  const huerto = await Huerto.findById(id);
+  if (!huerto) {
+    return res.status(404).json({ msg: 'Huerto no encontrado' });
+  }
+
+  // 2. Verificar que quien hace la petición es el DUEÑO (Desarrollador)
+  if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
+    return res.status(403).json({ msg: 'Acción no válida: No eres el dueño de este huerto' });
+  }
+
+  // 3. Buscar si el Agricultor existe en la base de datos
+  const agricultor = await Agricultor.findOne({ email });
+  if (!agricultor) {
+    return res.status(404).json({ msg: 'Usuario no encontrado. El agricultor debe registrarse primero.' });
+  }
+
+  // 4. Verificar si ya estaba agregado
+  if (huerto.agricultores.includes(agricultor._id)) {
+    return res.status(400).json({ msg: 'El agricultor ya está agregado a este huerto' });
+  }
+
+  // 5. Agregarlo y guardar
+  huerto.agricultores.push(agricultor._id);
+  await huerto.save();
+
+  res.json({ msg: 'Agricultor agregado correctamente' });
+};
+
 export {
   agregarHuerto,
   obtenerHuertos,
   obtenerHuerto,
   actualizarHuerto,
   eliminarHuerto,
-  actualizarDatosSensores
+  actualizarDatosSensores,
+  agregarAgricultor
 };

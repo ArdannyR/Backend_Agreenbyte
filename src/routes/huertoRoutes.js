@@ -5,7 +5,8 @@ import {
   obtenerHuerto,
   actualizarHuerto,
   eliminarHuerto,
-  actualizarDatosSensores
+  actualizarDatosSensores,
+  agregarAgricultor // <--- Ya lo tienes importado aquí
 } from '../controllers/huertoController.js';
 import checkAuth from '../middleware/authMiddleware.js';
 
@@ -21,7 +22,9 @@ router.route('/:id')
   .put(checkAuth, actualizarHuerto)
   .delete(checkAuth, eliminarHuerto);
 
-// Ruta de sensores (pública o protegida según tu lógica, aquí se mantiene igual)
+router.post('/agricultor/:id', checkAuth, agregarAgricultor);
+
+// Ruta de sensores (pública o protegida según tu lógica)
 router.post('/actualizar-datos', actualizarDatosSensores);
 
 export default router;
