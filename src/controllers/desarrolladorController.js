@@ -1,11 +1,11 @@
-import Agricultor from '../models/Agricultor.js';
+import Desarrollador from '../models/Desarrollador.js';
 import { generarId, generarJWT } from '../helpers/generarToken.js';
 import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 
 const registrar = async (req, res) => {
   const { nombre, email, password } = req.body;
 
-  const existeUsuario = await Agricultor.findOne({ email });
+  const existeUsuario = await Desarrollador.findOne({ email });
 
   if (existeUsuario) {
     const error = new Error('Email ya registrado. Intenta con otro.');
@@ -13,23 +13,23 @@ const registrar = async (req, res) => {
   }
 
   try {
-    const agricultor = new Agricultor(req.body);
-    agricultor.token = generarId();
+    const desarrollador = new Desarrollador(req.body);
+    desarrollador.token = generarId();
     
-    await agricultor.save();
+    await desarrollador.save();
 
     // --- Enviar el email ---
     try {
         await emailRegistro({
-          email: agricultor.email,
-          nombre: agricultor.nombre,
-          token: agricultor.token
+          email: desarrollador.email,
+          nombre: desarrollador.nombre,
+          token: desarrollador.token
         });
     } catch (errorEmail) {
         console.log("Error enviando el email: ", errorEmail);
     }
 
-    res.json({ msg: 'Usuario creado Correctamente, revisa tu email para confirmar tu cuenta', token: agricultor.token});
+    res.json({ msg: 'Usuario creado Correctamente, revisa tu email para confirmar tu cuenta', token: desarrollador.token});
 
   } catch (error) {
     console.log(error);
@@ -38,21 +38,18 @@ const registrar = async (req, res) => {
 };
 
 const confirmarCuenta = async (req, res) => {
-  // 1. Obtener el token de la URL
   const { token } = req.params;
 
-  // 2. Buscar al usuario con ese token
-  const usuarioConfirmar = await Agricultor.findOne({ token });
+  const usuarioConfirmar = await Desarrollador.findOne({ token });
 
   if (!usuarioConfirmar) {
     const error = new Error('Token no válido o la cuenta ya fue confirmada.');
     return res.status(404).json({ msg: error.message });
   }
 
-  // 3. Si existe, confirmar la cuenta y limpiar el token
   try {
     usuarioConfirmar.confirmado = true;
-    usuarioConfirmar.token = ''; // El token es de un solo uso
+    usuarioConfirmar.token = ''; 
     await usuarioConfirmar.save();
 
     res.json({ msg: 'Cuenta confirmada correctamente.' });
@@ -64,30 +61,25 @@ const confirmarCuenta = async (req, res) => {
 };
 
 const autenticar = async (req, res) => {
-  // 1. Obtener datos del formulario
   const { email, password } = req.body;
 
-  // 2. Comprobar si el usuario existe
-  const usuario = await Agricultor.findOne({ email });
+  const usuario = await Desarrollador.findOne({ email });
   if (!usuario) {
     const error = new Error('El usuario no existe.');
     return res.status(404).json({ msg: error.message });
   }
 
-  // 3. Comprobar si está confirmado (¡Importante!)
   if (!usuario.confirmado) {
     const error = new Error('Tu cuenta no ha sido confirmada.');
     return res.status(403).json({ msg: error.message });
   }
 
-  // 4. Comprobar el password
   if (await usuario.comprobarPassword(password)) {
-    // 5. Si es correcto, generar el JWT y enviarlo
     res.json({
       _id: usuario._id,
       nombre: usuario.nombre,
       email: usuario.email,
-      token: generarJWT(usuario._id), // ¡Aquí se genera el JWT!
+      token: generarJWT(usuario._id), 
     });
   } else {
     const error = new Error('Password incorrecto.');
@@ -96,17 +88,15 @@ const autenticar = async (req, res) => {
 };
 
 const perfil = (req, res) => {
-  // El middleware 'checkAuth' ya hizo la validación y adjuntó el usuario en req.agricultor
-  const { agricultor } = req;
-  
-  // Simplemente devolvemos los datos del perfil
-  res.json(agricultor);
+  // El middleware 'checkAuth' adjuntará 'desarrollador' en lugar de 'agricultor'
+  const { desarrollador } = req;
+  res.json(desarrollador);
 };
 
 const olvidePassword = async (req, res) => {
   const { email } = req.body;
 
-  const usuario = await Agricultor.findOne({ email });
+  const usuario = await Desarrollador.findOne({ email });
   if (!usuario) {
     const error = new Error('El usuario no existe.');
     return res.status(404).json({ msg: error.message });
@@ -140,10 +130,9 @@ const olvidePassword = async (req, res) => {
 const comprobarToken = async (req, res) => {
   const { token } = req.params;
 
-  // 1. Buscar al usuario por el token Y verificar que no haya expirado
-  const usuario = await Agricultor.findOne({
+  const usuario = await Desarrollador.findOne({
     token,
-    tokenExpires: { $gt: Date.now() }, // $gt = greater than (mayor que)
+    tokenExpires: { $gt: Date.now() }, 
   });
 
   if (!usuario) {
@@ -151,17 +140,14 @@ const comprobarToken = async (req, res) => {
     return res.status(404).json({ msg: error.message });
   }
 
-  // 2. Si es válido, respondemos OK.
-  // El frontend usará esta respuesta para mostrar el formulario de nueva contraseña.
   res.json({ msg: 'Token válido. Introduce tu nueva contraseña.' });
 };
 
 const nuevoPassword = async (req, res) => {
   const { token } = req.params;
-  const { password } = req.body; // El nuevo password
+  const { password } = req.body; 
 
-  // 1. Validar que el token sigue siendo válido
-  const usuario = await Agricultor.findOne({
+  const usuario = await Desarrollador.findOne({
     token,
     tokenExpires: { $gt: Date.now() },
   });
@@ -171,18 +157,13 @@ const nuevoPassword = async (req, res) => {
     return res.status(404).json({ msg: error.message });
   }
 
-  // 2. Validar que se envió un password
   if (!password || password.length < 6) {
     const error = new Error('El password debe tener al menos 6 caracteres.');
     return res.status(400).json({ msg: error.message });
   }
 
   try {
-    // 3. Guardar el nuevo password.
-    // El 'pre-save' hook de tu modelo Agricultor.js se encargará de hashearlo.
     usuario.password = password;
-
-    // 4. Limpiar/invalidar el token para que no se reutilice
     usuario.token = '';
     usuario.tokenExpires = null;
 
@@ -195,29 +176,26 @@ const nuevoPassword = async (req, res) => {
 };
 
 const actualizarPerfil = async (req, res) => {
-  const agricultor = req.agricultor; 
+  const desarrollador = req.desarrollador; 
   
-  // Extraemos TODO lo que venga del body
   const { nombre, email, apellido, telefono, direccion } = req.body;
 
-  if (email && email !== agricultor.email) {
-    const existeEmail = await Agricultor.findOne({ email });
+  if (email && email !== desarrollador.email) {
+    const existeEmail = await Desarrollador.findOne({ email });
     if (existeEmail) {
       return res.status(400).json({ msg: 'Ese email ya está registrado' });
     }
   }
 
-  // Actualizamos los campos (si no vienen, mantenemos el anterior)
-  agricultor.nombre = nombre || agricultor.nombre;
-  agricultor.email = email || agricultor.email;
-  
-  agricultor.apellido = apellido || agricultor.apellido;
-  agricultor.telefono = telefono || agricultor.telefono;
-  agricultor.direccion = direccion || agricultor.direccion;
+  desarrollador.nombre = nombre || desarrollador.nombre;
+  desarrollador.email = email || desarrollador.email;
+  desarrollador.apellido = apellido || desarrollador.apellido;
+  desarrollador.telefono = telefono || desarrollador.telefono;
+  desarrollador.direccion = direccion || desarrollador.direccion;
 
   try {
-    const agricultorActualizado = await agricultor.save();
-    res.json(agricultorActualizado);
+    const desarrolladorActualizado = await desarrollador.save();
+    res.json(desarrolladorActualizado);
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: 'Hubo un error al actualizar el perfil' });

@@ -2,7 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import conectarDB from './config/db.js';
-import agricultorRoutes from './routes/agricultorRoutes.js'
+// CAMBIO: Importamos las nuevas rutas
+import desarrolladorRoutes from './routes/desarrolladorRoutes.js'
 import huertoRoutes from './routes/huertoRoutes.js';
 
 // Configura dotenv para cargar variables de entorno
@@ -28,12 +29,14 @@ app.use(express.json());
 
 // Definir el puerto
 const PORT = process.env.PORT || 4000;
-app.use('/api/agricultores', agricultorRoutes);
+
+// CAMBIO: Usamos el nuevo endpoint base
+app.use('/api/desarrolladores', desarrolladorRoutes);
 app.use('/api/huertos', huertoRoutes); 
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-  res.send('¡Hola Mundo! El backend del Agricultor está funcionando.');
+  res.send('¡Hola Mundo! El backend del Desarrollador está funcionando.');
 });
 
 // Arrancar el servidor

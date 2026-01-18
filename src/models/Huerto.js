@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Desarrollador from './Desarrollador.js';
 
 const huertoSchema = mongoose.Schema(
   {
@@ -38,9 +39,9 @@ const huertoSchema = mongoose.Schema(
       default: Date.now
     },
     // Relación: Un huerto pertenece a un Agricultor
-    agricultor: {
+    desarrollador: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Agricultor',
+      ref: 'Desarrollador',
       required: true
     }
   },

@@ -2,17 +2,14 @@ import Huerto from '../models/Huerto.js';
 
 const agregarHuerto = async (req, res) => {
   const huerto = new Huerto(req.body);
-  huerto.agricultor = req.agricultor._id;
-
-  // Arda recordatorio. Para codigo de Arduino ID debes String DEVICE_ID = "SENSOR-AGREENBYTE-001";
+  // Cambiado req.agricultor -> req.desarrollador
+  huerto.desarrollador = req.desarrollador._id;
 
   try {
     const huertoAlmacenado = await huerto.save();
     res.json(huertoAlmacenado);
   } catch (error) {
-    // Manejo especial si el código del dispositivo ya existe
     if (error.code === 11000) {
-      // 11000 es el código de error de MongoDB para duplicados
       return res.status(400).json({ msg: 'Ese dispositivo ya está registrado en otro huerto' });
     }
     console.log(error);
@@ -21,15 +18,14 @@ const agregarHuerto = async (req, res) => {
 };
 
 const obtenerHuertos = async (req, res) => {
-  // Obtener solo los huertos del agricultor autenticado
-  const huertos = await Huerto.find().where('agricultor').equals(req.agricultor);
+  // Cambiado .where('agricultor').equals(req.agricultor) -> .where('desarrollador').equals(req.desarrollador)
+  const huertos = await Huerto.find().where('desarrollador').equals(req.desarrollador);
   res.json(huertos);
 };
 
 const obtenerHuerto = async (req, res) => {
   const { id } = req.params;
 
-  // Validar que sea un ID válido de MongoDB
   if(id.match(/^[0-9a-fA-F]{24}$/)) {
     const huerto = await Huerto.findById(id);
 
@@ -37,8 +33,8 @@ const obtenerHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    // Validar que el huerto pertenezca al usuario autenticado
-    if (huerto.agricultor.toString() !== req.agricultor._id.toString()) {
+    // Validación de permisos actualizada
+    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida (No tienes permisos)' });
     }
 
@@ -58,11 +54,11 @@ const actualizarHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    if (huerto.agricultor.toString() !== req.agricultor._id.toString()) {
+    // Validación de permisos actualizada
+    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida' });
     }
 
-    // Actualizar campos
     huerto.nombre = req.body.nombre || huerto.nombre;
     huerto.tipoCultivo = req.body.tipoCultivo || huerto.tipoCultivo;
     huerto.ubicacion = req.body.ubicacion || huerto.ubicacion;
@@ -91,8 +87,8 @@ const eliminarHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    // SEGURIDAD: Verifica propiedad
-    if (huerto.agricultor.toString() !== req.agricultor._id.toString()) {
+    // Validación de permisos actualizada
+    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida' });
     }
 
@@ -110,7 +106,6 @@ const eliminarHuerto = async (req, res) => {
 const actualizarDatosSensores = async (req, res) => {
   const { codigoDispositivo, temperatura, humedad } = req.body;
 
-  // Buscamos el huerto NO por ID, sino por el código del dispositivo
   const huerto = await Huerto.findOne({ codigoDispositivo });
 
   if (!huerto) {

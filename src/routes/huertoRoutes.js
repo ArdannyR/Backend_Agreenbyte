@@ -21,7 +21,7 @@ router.route('/:id')
   .put(checkAuth, actualizarHuerto)
   .delete(checkAuth, eliminarHuerto);
 
-// Ruta de sensores
+// Ruta de sensores (pública o protegida según tu lógica, aquí se mantiene igual)
 router.post('/actualizar-datos', actualizarDatosSensores);
 
 export default router;

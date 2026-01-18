@@ -8,7 +8,7 @@ import {
   comprobarToken,
   nuevoPassword,
   actualizarPerfil
-} from '../controllers/agricultorController.js';
+} from '../controllers/desarrolladorController.js';
 import checkAuth from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -16,7 +16,7 @@ const router = express.Router();
 // --- Endpoints ---
 
 // Área Pública
-router.post('/', registrar); // no poner /registrar porque en index.js ya se define la ruta base
+router.post('/', registrar); 
 router.get('/confirmar/:token', confirmarCuenta);
 router.post('/login', autenticar);
 

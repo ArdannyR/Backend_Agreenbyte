@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import Agricultor from '../models/Agricultor.js';
+import Desarrollador from '../models/Desarrollador.js';
 
 const checkAuth = async (req, res, next) => {
   let token;
@@ -14,16 +14,15 @@ const checkAuth = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // 3. Verificar el token con la clave secreta
-      // (Asegúrate de tener JWT_SECRET en tu archivo .env)
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // 4. Buscar al usuario en la BD con el ID del token
-      // y adjuntarlo a la petición (req)
-      req.agricultor = await Agricultor.findById(decoded.id).select(
+      // CAMBIO: Ahora buscamos en 'Desarrollador' y asignamos a 'req.desarrollador'
+      req.desarrollador = await Desarrollador.findById(decoded.id).select(
         '-password -confirmado -token' // Excluimos campos sensibles
       );
 
-      if (!req.agricultor) {
+      if (!req.desarrollador) {
         return res.status(401).json({ msg: 'Token no válido (usuario no encontrado)' });
       }
 
