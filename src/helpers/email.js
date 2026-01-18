@@ -4,29 +4,32 @@ dotenv.config();
 
 // --- CONFIGURACIÓN DE TRANSPORTERS ---
 
-// 1. Principal: BREVO
+// 1. Principal: BREVO (Corregido error de certificado)
 const transportBrevo = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
-  port: 2525,
+  port: 587, // Puerto estándar TLS
   secure: false, 
   auth: {
     user: process.env.BREVO_USER, 
     pass: process.env.BREVO_SMTP_KEY,
   },
+  tls: {
+    rejectUnauthorized: false // Soluciona el error "Hostname/IP does not match"
+  }
 });
 
 // 2. Respaldo: GMAIL
 const transportGmail = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com', // Asegura el host correcto
   port: 465,
   secure: true,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // DEBE SER UNA "APP PASSWORD", NO TU CONTRASEÑA REAL
   },
 });
 
-// --- FUNCIÓN DE ENVÍO HÍBRIDO (La magia ocurre aquí) ---
+// --- FUNCIÓN DE ENVÍO HÍBRIDO ---
 const enviarCorreoHibrido = async (opcionesEmail) => {
   try {
     // Intento 1: Brevo
@@ -41,19 +44,17 @@ const enviarCorreoHibrido = async (opcionesEmail) => {
 
     try {
       // Intento 2: Gmail (Respaldo)
-      // Nota: Gmail sobreescribirá el 'from' con tu correo real de Gmail
       const infoBackup = await transportGmail.sendMail(opcionesEmail);
       console.log("✅ Correo enviado con Gmail (Respaldo) ID:", infoBackup.messageId);
       return infoBackup;
 
     } catch (errorBackup) {
       console.error("❌ Fallaron ambos servidores de correo.");
+      console.error("Error Gmail:", errorBackup.message); // Imprimir el error real de Gmail
       throw new Error("No se pudo enviar el email por ningún medio.");
     }
   }
 };
-
-// --- EXPORTACIONES ---
 
 export const emailRegistro = async (datos) => {
   const { email, nombre, token } = datos;
