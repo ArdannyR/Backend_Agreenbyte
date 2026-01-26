@@ -3,8 +3,8 @@ import Agricultor from '../models/Agricultor.js';
 
 const agregarHuerto = async (req, res) => {
   const huerto = new Huerto(req.body);
-  // Cambiado req.agricultor -> req.desarrollador
-  huerto.desarrollador = req.desarrollador._id;
+  // Asigna el ID del administrador autenticado al huerto
+  huerto.administrador = req.administrador._id;
 
   try {
     const huertoAlmacenado = await huerto.save();
@@ -19,9 +19,9 @@ const agregarHuerto = async (req, res) => {
 };
 
 const obtenerHuertos = async (req, res) => {
-  // CASO 1: Petición hecha por el DUEÑO (Desarrollador)
-  if (req.desarrollador) {
-    const huertos = await Huerto.find().where('desarrollador').equals(req.desarrollador);
+  // CASO 1: Petición hecha por el DUEÑO (Administrador)
+  if (req.administrador) {
+    const huertos = await Huerto.find().where('administrador').equals(req.administrador);
     return res.json(huertos);
   }
 
@@ -47,8 +47,9 @@ const obtenerHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    // Validación de permisos actualizada
-    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
+    // Validación de permisos: Verificar si es el dueño (Administrador)
+    // Nota: El agricultor no entra aquí según tu lógica original, o necesitaría un 'else if' si quieres que ellos también vean detalle
+    if (huerto.administrador.toString() !== req.administrador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida (No tienes permisos)' });
     }
 
@@ -68,8 +69,8 @@ const actualizarHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    // Validación de permisos actualizada
-    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
+    // Validación de permisos
+    if (huerto.administrador.toString() !== req.administrador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida' });
     }
 
@@ -101,8 +102,8 @@ const eliminarHuerto = async (req, res) => {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
-    // Validación de permisos actualizada
-    if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
+    // Validación de permisos
+    if (huerto.administrador.toString() !== req.administrador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida' });
     }
 
@@ -143,8 +144,8 @@ const agregarAgricultor = async (req, res) => {
     return res.status(404).json({ msg: 'Huerto no encontrado' });
   }
 
-  // 2. Verificar que quien hace la petición es el DUEÑO (Desarrollador)
-  if (huerto.desarrollador.toString() !== req.desarrollador._id.toString()) {
+  // 2. Verificar que quien hace la petición es el DUEÑO (Administrador)
+  if (huerto.administrador.toString() !== req.administrador._id.toString()) {
     return res.status(403).json({ msg: 'Acción no válida: No eres el dueño de este huerto' });
   }
 

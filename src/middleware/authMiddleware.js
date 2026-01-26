@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import Desarrollador from '../models/Desarrollador.js';
+import Administrador from '../models/Administrador.js'; 
 import Agricultor from '../models/Agricultor.js';
 
 const checkAuth = async (req, res, next) => {
@@ -9,16 +9,12 @@ const checkAuth = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // 1. Intentar buscar en Desarrolladores
-      const desarrollador = await Desarrollador.findById(decoded.id).select('-password -token -confirmado');
+      const administrador = await Administrador.findById(decoded.id).select('-password -token -confirmado');
       
-      if (desarrollador) {
-        req.desarrollador = desarrollador;
+      if (administrador) {
+        req.administrador = administrador; 
         return next();
       }
-
-      // 2. Si no es desarrollador, buscar en Agricultores
       const agricultor = await Agricultor.findById(decoded.id).select('-password');
       
       if (agricultor) {
@@ -26,7 +22,6 @@ const checkAuth = async (req, res, next) => {
         return next();
       }
 
-      // Si no encuentra ninguno
       return res.status(404).json({ msg: 'Usuario no encontrado' });
 
     } catch (error) {

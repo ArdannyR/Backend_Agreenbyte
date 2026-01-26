@@ -4,9 +4,9 @@ import cors from 'cors';
 import conectarDB from './config/db.js';
 
 // Importación de rutas
-import desarrolladorRoutes from './routes/desarrolladorRoutes.js';
+import administradorRoutes from './routes/administradorRoutes.js'; 
 import huertoRoutes from './routes/huertoRoutes.js';
-import agricultorRoutes from './routes/agricultorRoutes.js'; // [NUEVO] Importamos rutas de agricultores
+import agricultorRoutes from './routes/agricultorRoutes.js';
 
 // Configura dotenv para cargar variables de entorno
 dotenv.config();
@@ -34,9 +34,9 @@ app.use(express.json());
 const PORT = process.env.PORT || 4000;
 
 // --- DEFINICIÓN DE RUTAS ---
-app.use('/api/desarrolladores', desarrolladorRoutes);
+app.use('/api/administradores', administradorRoutes); 
 app.use('/api/huertos', huertoRoutes); 
-app.use('/api/agricultores', agricultorRoutes); // [NUEVO] Endpoint para agricultores
+app.use('/api/agricultores', agricultorRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

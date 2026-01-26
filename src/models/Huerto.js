@@ -38,10 +38,10 @@ const huertoSchema = mongoose.Schema(
       type: Date,
       default: Date.now
     },
-    // Relación: Un huerto lo hace un desarrollador, el huerto puede ir a muchos agricultores asi como muchos agricultores pueden ver un solo huerto
-    desarrollador: {
+    // Relación: Un huerto lo hace un administrador, el huerto puede ir a muchos agricultores asi como muchos agricultores pueden ver un solo huerto
+    administrador: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Desarrollador',
+      ref: 'Administrador', 
       required: true
     },
     agricultores: [
@@ -51,7 +51,7 @@ const huertoSchema = mongoose.Schema(
       }
     ]
   },{
-    timestamps: true, // Crea createdAt y updatedAt automáticamente
+    timestamps: true, 
   }
 );
 

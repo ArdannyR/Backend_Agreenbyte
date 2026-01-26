@@ -1,11 +1,11 @@
-import Desarrollador from '../models/Desarrollador.js';
+import Administrador from '../models/Administrador.js'; 
 import { generarId, generarJWT } from '../helpers/generarToken.js';
 import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 
 const registrar = async (req, res) => {
   const { nombre, email, password } = req.body;
 
-  const existeUsuario = await Desarrollador.findOne({ email });
+  const existeUsuario = await Administrador.findOne({ email }); // [CAMBIO]
 
   if (existeUsuario) {
     const error = new Error('Email ya registrado. Intenta con otro.');
@@ -13,23 +13,23 @@ const registrar = async (req, res) => {
   }
 
   try {
-    const desarrollador = new Desarrollador(req.body);
-    desarrollador.token = generarId();
+    // [CAMBIO] Variable y new Administrador
+    const administrador = new Administrador(req.body);
+    administrador.token = generarId();
     
-    await desarrollador.save();
+    await administrador.save();
 
-    // --- Enviar el email ---
     try {
         await emailRegistro({
-          email: desarrollador.email,
-          nombre: desarrollador.nombre,
-          token: desarrollador.token
+          email: administrador.email,
+          nombre: administrador.nombre,
+          token: administrador.token
         });
     } catch (errorEmail) {
         console.log("Error enviando el email: ", errorEmail);
     }
 
-    res.json({ msg: 'Usuario creado Correctamente, revisa tu email para confirmar tu cuenta', token: desarrollador.token});
+    res.json({ msg: 'Usuario creado Correctamente, revisa tu email para confirmar tu cuenta', token: administrador.token});
 
   } catch (error) {
     console.log(error);
@@ -40,7 +40,7 @@ const registrar = async (req, res) => {
 const confirmarCuenta = async (req, res) => {
   const { token } = req.params;
 
-  const usuarioConfirmar = await Desarrollador.findOne({ token });
+  const usuarioConfirmar = await Administrador.findOne({ token }); // [CAMBIO]
 
   if (!usuarioConfirmar) {
     const error = new Error('Token no válido o la cuenta ya fue confirmada.');
@@ -63,7 +63,7 @@ const confirmarCuenta = async (req, res) => {
 const autenticar = async (req, res) => {
   const { email, password } = req.body;
 
-  const usuario = await Desarrollador.findOne({ email });
+  const usuario = await Administrador.findOne({ email }); // [CAMBIO]
   if (!usuario) {
     const error = new Error('El usuario no existe.');
     return res.status(404).json({ msg: error.message });
@@ -88,15 +88,14 @@ const autenticar = async (req, res) => {
 };
 
 const perfil = (req, res) => {
-  // El middleware 'checkAuth' adjuntará 'desarrollador' en lugar de 'agricultor'
-  const { desarrollador } = req;
-  res.json(desarrollador);
+  const { administrador } = req;
+  res.json(administrador);
 };
 
 const olvidePassword = async (req, res) => {
   const { email } = req.body;
 
-  const usuario = await Desarrollador.findOne({ email });
+  const usuario = await Administrador.findOne({ email }); // [CAMBIO]
   if (!usuario) {
     const error = new Error('El usuario no existe.');
     return res.status(404).json({ msg: error.message });
@@ -130,7 +129,7 @@ const olvidePassword = async (req, res) => {
 const comprobarToken = async (req, res) => {
   const { token } = req.params;
 
-  const usuario = await Desarrollador.findOne({
+  const usuario = await Administrador.findOne({ // [CAMBIO]
     token,
     tokenExpires: { $gt: Date.now() }, 
   });
@@ -147,7 +146,7 @@ const nuevoPassword = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body; 
 
-  const usuario = await Desarrollador.findOne({
+  const usuario = await Administrador.findOne({ // [CAMBIO]
     token,
     tokenExpires: { $gt: Date.now() },
   });
@@ -176,26 +175,26 @@ const nuevoPassword = async (req, res) => {
 };
 
 const actualizarPerfil = async (req, res) => {
-  const desarrollador = req.desarrollador; 
+  const administrador = req.administrador; 
   
   const { nombre, email, apellido, telefono, direccion } = req.body;
 
-  if (email && email !== desarrollador.email) {
-    const existeEmail = await Desarrollador.findOne({ email });
+  if (email && email !== administrador.email) {
+    const existeEmail = await Administrador.findOne({ email }); // [CAMBIO]
     if (existeEmail) {
       return res.status(400).json({ msg: 'Ese email ya está registrado' });
     }
   }
 
-  desarrollador.nombre = nombre || desarrollador.nombre;
-  desarrollador.email = email || desarrollador.email;
-  desarrollador.apellido = apellido || desarrollador.apellido;
-  desarrollador.telefono = telefono || desarrollador.telefono;
-  desarrollador.direccion = direccion || desarrollador.direccion;
+  administrador.nombre = nombre || administrador.nombre;
+  administrador.email = email || administrador.email;
+  administrador.apellido = apellido || administrador.apellido;
+  administrador.telefono = telefono || administrador.telefono;
+  administrador.direccion = direccion || administrador.direccion;
 
   try {
-    const desarrolladorActualizado = await desarrollador.save();
-    res.json(desarrolladorActualizado);
+    const administradorActualizado = await administrador.save();
+    res.json(administradorActualizado);
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: 'Hubo un error al actualizar el perfil' });

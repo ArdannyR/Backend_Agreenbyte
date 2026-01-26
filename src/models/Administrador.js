@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
-const desarrolladorSchema = mongoose.Schema(
+const administradorSchema = mongoose.Schema(
   {
     nombre: {
       type: String,
@@ -50,7 +50,7 @@ const desarrolladorSchema = mongoose.Schema(
   }
 );
 
-desarrolladorSchema.pre('save', async function (next) {
+administradorSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
@@ -59,9 +59,9 @@ desarrolladorSchema.pre('save', async function (next) {
   next();
 });
 
-desarrolladorSchema.methods.comprobarPassword = async function (passwordFormulario) {
+administradorSchema.methods.comprobarPassword = async function (passwordFormulario) {
   return await bcrypt.compare(passwordFormulario, this.password);
 };
 
-const Desarrollador = mongoose.model('Desarrollador', desarrolladorSchema);
-export default Desarrollador;
+const Administrador = mongoose.model('Administrador', administradorSchema);
+export default Administrador;

@@ -8,13 +8,12 @@ import {
   comprobarToken,
   nuevoPassword,
   actualizarPerfil
-} from '../controllers/desarrolladorController.js';
+} from '../controllers/administradorController.js';
 import checkAuth from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // --- Endpoints ---
-
 // Área Pública
 router.post('/', registrar); 
 router.get('/confirmar/:token', confirmarCuenta);
