@@ -1,7 +1,8 @@
 import express from 'express';
+import conectarDB from './config/db.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import conectarDB from './config/db.js';
+
 
 // Importación de rutas
 import administradorRoutes from './routes/administradorRoutes.js'; 
@@ -13,7 +14,7 @@ dotenv.config();
 
 // Configuración de URL del frontend según el entorno
 if (process.env.NODE_ENV === 'production') {
-    process.env.FRONTEND_URL = process.env.URL_FRONTEND_PROD;
+    process.env.FRONTEND_URL = process.env.URL_FRONTEND_URL;
 } else {
     process.env.FRONTEND_URL = process.env.URL_FRONTEND_LOCAL;
 }

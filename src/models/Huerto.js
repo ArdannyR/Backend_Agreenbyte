@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Desarrollador from './Desarrollador.js';
+import Desarrollador from './Administrador.js';
 
 const huertoSchema = mongoose.Schema(
   {
@@ -21,7 +21,7 @@ const huertoSchema = mongoose.Schema(
     codigoDispositivo: {
       type: String,
       required: true,     
-      unique: true,       //No pueden haber dos huertos con el mismo chip
+      unique: true,       
       trim: true
     },
     // Datos de sensores

@@ -4,7 +4,7 @@ const conectarDB = async () => {
   try {
     const dbUri = process.env.NODE_ENV === 'production' 
       ? process.env.MONGODB_URI_PRODUCTION 
-      : process.env.MONGODB_URI_LOCAL;
+      : process.env.MONGODB_URI;
 
     if (!dbUri) {
       throw new Error("No se ha definido la URI de la base de datos en el .env");
