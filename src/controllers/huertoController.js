@@ -120,7 +120,6 @@ const eliminarHuerto = async (req, res) => {
 
 const actualizarDatosSensores = async (req, res) => {
   const { codigoDispositivo, temperatura, humedad } = req.body;
-
   const huerto = await Huerto.findOne({ codigoDispositivo });
 
   if (!huerto) {
@@ -130,6 +129,17 @@ const actualizarDatosSensores = async (req, res) => {
   huerto.temperatura = temperatura;
   huerto.humedad = humedad;
   await huerto.save();
+
+  if (req.io) {
+      req.io.emit('sensor:data', {
+          huertoId: huerto._id,
+          codigo: codigoDispositivo,
+          temperatura: temperatura,
+          humedad: humedad,
+          fecha: new Date()
+      });
+      console.log(`📡 Datos emitidos para ${codigoDispositivo}: T:${temperatura} H:${humedad}`);
+  }
 
   res.json({ msg: 'Datos actualizados correctamente' });
 };
@@ -166,6 +176,8 @@ const agregarAgricultor = async (req, res) => {
 
   res.json({ msg: 'Agricultor agregado correctamente' });
 };
+
+
 
 export {
   agregarHuerto,

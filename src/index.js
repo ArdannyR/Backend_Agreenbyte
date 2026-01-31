@@ -2,7 +2,8 @@ import express from 'express';
 import conectarDB from './config/db.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
-
+import http from 'http';
+import { Server } from 'socket.io';
 
 // Importación de rutas
 import administradorRoutes from './routes/administradorRoutes.js'; 
@@ -25,7 +26,25 @@ conectarDB();
 // Crear la instancia de express
 const app = express();
 
-// Habilitar CORS (para que tu frontend se conecte)
+// Crear el servidor HTTP a partir de la app de Express
+const server = http.createServer(app);
+
+// Configurar Socket.io
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || "*", // Permitimos el origen del frontend
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+// Middleware Mágico: Compartir 'io' con los controladores
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+// Habilitar CORS (para las peticiones HTTP normales)
 app.use(cors());
 
 // Habilitar lectura de JSON
@@ -41,10 +60,20 @@ app.use('/api/agricultores', agricultorRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-  res.send('¡Hola Mundo! El backend de Agreenbyte está funcionando correctamente.');
+  res.send('Backend Agreenbyte funcionando con WebSockets 🚀');
+});
+
+// Eventos de conexión de Socket.io (Para ver en consola quién entra)
+io.on('connection', (socket) => {
+    console.log(`⚡ Cliente conectado al socket: ${socket.id}`);
+
+    socket.on('disconnect', () => {
+        console.log(`❌ Cliente desconectado: ${socket.id}`);
+    });
 });
 
 // Arrancar el servidor
-app.listen(PORT, () => {
+// IMPORTANTE: Usamos server.listen en lugar de app.listen
+server.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
