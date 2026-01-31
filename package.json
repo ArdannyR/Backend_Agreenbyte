@@ -21,7 +21,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.3",
     "nodemailer": "^7.0.10",
-    "react-router-dom": "^7.9.5"
+    "react-router-dom": "^7.9.5",
+    "stripe": "^20.3.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

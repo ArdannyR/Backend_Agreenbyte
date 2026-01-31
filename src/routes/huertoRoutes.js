@@ -6,25 +6,23 @@ import {
   actualizarHuerto,
   eliminarHuerto,
   actualizarDatosSensores,
-  agregarAgricultor // <--- Ya lo tienes importado aquí
+  agregarAgricultor
 } from '../controllers/huertoController.js';
 import checkAuth from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Todas las rutas de huertos requieren autenticación
-router.route('/')
-  .get(checkAuth, obtenerHuertos)
-  .post(checkAuth, agregarHuerto);
+// Área Privada (Requieren Autenticación)
+router.get('/', checkAuth, obtenerHuertos);
+router.post('/', checkAuth, agregarHuerto);
 
-router.route('/:id')
-  .get(checkAuth, obtenerHuerto)
-  .put(checkAuth, actualizarHuerto)
-  .delete(checkAuth, eliminarHuerto);
+router.get('/:id', checkAuth, obtenerHuerto);
+router.put('/:id', checkAuth, actualizarHuerto);
+router.delete('/:id', checkAuth, eliminarHuerto);
 
 router.post('/agricultor/:id', checkAuth, agregarAgricultor);
 
-// Ruta de sensores (pública o protegida según tu lógica)
+// Área Pública (O de Sensores)
 router.post('/actualizar-datos', actualizarDatosSensores);
 
 export default router;
