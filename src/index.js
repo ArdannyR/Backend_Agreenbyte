@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import administradorRoutes from './routes/administradorRoutes.js'; 
 import huertoRoutes from './routes/huertoRoutes.js';
 import agricultorRoutes from './routes/agricultorRoutes.js';
+import sensorRoutes from './routes/sensorRoutes.js'; // <--- NUEVO: Importamos rutas de sensores
 
 // Configura dotenv para cargar variables de entorno
 dotenv.config();
@@ -39,6 +40,7 @@ const io = new Server(server, {
 });
 
 // Middleware Mágico: Compartir 'io' con los controladores
+// Esto permite que sensorController.js emita eventos aunque esté en otro archivo
 app.use((req, res, next) => {
     req.io = io;
     next();
@@ -57,10 +59,11 @@ const PORT = process.env.PORT || 4000;
 app.use('/api/administradores', administradorRoutes); 
 app.use('/api/huertos', huertoRoutes); 
 app.use('/api/agricultores', agricultorRoutes);
+app.use('/api/sensores', sensorRoutes); // <--- NUEVO: Endpoint base para IoT
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-  res.send('Backend Agreenbyte funcionando con WebSockets 🚀');
+  res.send('Backend Agreenbyte funcionando con WebSockets y TimeSeries 🚀');
 });
 
 // Eventos de conexión de Socket.io (Para ver en consola quién entra)
