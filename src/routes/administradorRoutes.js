@@ -7,7 +7,8 @@ import {
   olvidePassword,
   comprobarToken,
   nuevoPassword,
-  actualizarPerfil
+  actualizarPerfil,
+  googleLogin
 } from '../controllers/administradorController.js';
 import checkAuth from '../middleware/authMiddleware.js';
 
@@ -18,6 +19,7 @@ const router = express.Router();
 router.post('/', registrar); 
 router.get('/confirmar/:token', confirmarCuenta);
 router.post('/login', autenticar);
+router.post('/google-login', googleLogin);
 
 // Area de recuperación de contraseña
 router.post('/olvide-password', olvidePassword); 

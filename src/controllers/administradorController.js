@@ -1,6 +1,50 @@
 import Administrador from '../models/Administrador.js'; 
 import { generarId, generarJWT } from '../helpers/generarToken.js';
 import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const googleLogin = async (req, res) => {
+    const { idToken } = req.body; // El token que viene del frontend
+
+    try {
+        // 1. Verificar el token con Google
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID, 
+        });
+        
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
+
+        // 2. Buscar si el usuario ya existe en tu DB
+        let usuario = await Administrador.findOne({ email });
+
+        if (!usuario) {
+            // Si no existe, puedes crearlo automáticamente (Registro con Google)
+            usuario = new Administrador({
+                nombre: name,
+                email: email,
+                password: ':)', // Password dummy ya que usa Google
+                confirmado: true // Al venir de Google, el email ya está verificado
+            });
+            await usuario.save();
+        }
+
+        // 3. Generar tu propio JWT para que el usuario siga navegando en tu App
+        res.json({
+            _id: usuario._id,
+            nombre: usuario.nombre,
+            email: usuario.email,
+            token: generarJWT(usuario._id), 
+        });
+
+    } catch (error) {
+        console.error("Error al verificar token de Google:", error);
+        res.status(403).json({ msg: "Token de Google no válido" });
+    }
+};
 
 const registrar = async (req, res) => {
   const { nombre, email, password } = req.body;
@@ -209,5 +253,6 @@ export {
   olvidePassword,
   comprobarToken,
   nuevoPassword,
-  actualizarPerfil        
+  actualizarPerfil,
+  googleLogin       
 };
