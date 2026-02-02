@@ -9,7 +9,8 @@ import { Server } from 'socket.io';
 import administradorRoutes from './routes/administradorRoutes.js'; 
 import huertoRoutes from './routes/huertoRoutes.js';
 import agricultorRoutes from './routes/agricultorRoutes.js';
-import sensorRoutes from './routes/sensorRoutes.js'; // <--- NUEVO: Importamos rutas de sensores
+import sensorRoutes from './routes/sensorRoutes.js'; 
+import pagoRoutes from './routes/pagoRoutes.js';
 
 // Configura dotenv para cargar variables de entorno
 dotenv.config();
@@ -59,7 +60,8 @@ const PORT = process.env.PORT || 4000;
 app.use('/api/administradores', administradorRoutes); 
 app.use('/api/huertos', huertoRoutes); 
 app.use('/api/agricultores', agricultorRoutes);
-app.use('/api/sensores', sensorRoutes); // <--- NUEVO: Endpoint base para IoT
+app.use('/api/sensores', sensorRoutes); 
+app.use('/api/pagos', pagoRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
