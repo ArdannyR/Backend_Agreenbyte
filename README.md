@@ -1,8 +1,8 @@
 # Agreenbyte 🌿
-Sistema de gestión y monitoreo inteligente para huertos, conectando administradores y agricultores con tecnología IoT.
+Sistema de gestión y monitoreo inteligente para huertos, conectando administradores y agricultores con tecnología IoT avanzada.
 
 ## 👨‍💻 El Equipo
-* **Brandon Huera**: Scrum Master / Desarrollo Móvil (Componente futuro).
+* **Brandon Huera**: Scrum Master / Desarrollo Móvil.
 * **Juan Lucero**: Desarrollo Frontend.
 * **Ardanny Romero**: Desarrollo Backend.
 
@@ -11,50 +11,55 @@ Sistema de gestión y monitoreo inteligente para huertos, conectando administrad
 ## 🛠️ Tecnologías Utilizadas
 ### Backend
 * **Framework:** Node.js con Express (v5.1.0).
-* **Base de Datos:** MongoDB con Mongoose (v8.19.3).
-* **Autenticación:** JSON Web Tokens (JWT) y Bcrypt para el hash de contraseñas.
-* **Envío de Emails:** Sistema híbrido con Nodemailer utilizando Brevo (principal) y Gmail (respaldo).
-* **IoT:** Integración con microcontroladores ESP32 para recolección de datos. (Funcionalidad aun en pruebas)
-* **Herramientas:** Dotenv para gestión de variables de entorno y Nodemon para desarrollo.
+* **Base de Datos:** MongoDB con Mongoose (v8.19.3) utilizando colecciones **Time Series** para métricas.
+* **Comunicación en Tiempo Real:** Socket.io para actualización instantánea de sensores.
+* **Pasarela de Pagos:** Integración con **Stripe** para planes Pro.
+* **Autenticación:** JSON Web Tokens (JWT), Bcrypt y **Google Auth**.
+* **Envío de Emails:** Sistema híbrido con Nodemailer (Brevo como principal y Gmail como respaldo).
+* **IoT:** Ingesta de datos desde dispositivos ESP32.
 
 ---
 
 ## 🗺️ Endpoints de la API
 
 ### 👤 Administradores (`/api/administradores`)
-Gestión global de la plataforma y usuarios.
-* `POST /`: Registra un nuevo administrador.
-* `POST /login`: Autentica y genera un token JWT.
-* `GET /confirmar/:token`: Confirma la cuenta mediante token de email.
-* `POST /olvide-password`: Inicia recuperación de cuenta.
-* `GET /perfil`: Obtiene datos del perfil (Requiere `checkAuth`).
-* `PUT /perfil`: Actualiza datos personales del administrador.
+* `POST /`: Registro de nuevo administrador.
+* `POST /login`: Autenticación local (Email y Password).
+* `POST /google-login`: **Autenticación con Google Auth** (Recibe el token de Google y retorna JWT del sistema).
+* `GET /confirmar/:token`: Confirmación de cuenta mediante enlace de correo.
+* `POST /olvide-password`: Solicitar recuperación de contraseña.
+* `POST /olvide-password/:token`: Definir nueva contraseña tras recuperación.
+* `GET /perfil`: Obtener datos del perfil autenticado (Protegido con Middleware).
 
 ### 👨‍🌾 Agricultores (`/api/agricultores`)
-Área para los usuarios que operan directamente en los huertos.
-* `POST /`: Registro de nuevos agricultores.
+* `POST /`: Registro de agricultores.
 * `POST /login`: Inicio de sesión para agricultores.
-* `GET /perfil`: Información del perfil del agricultor (Protegido).
+* `GET /perfil`: Información del perfil (Protegido).
 
 ### 🏡 Huertos (`/api/huertos`)
-Control de espacios de cultivo y asignación de personal.
-* `POST /`: Crea un nuevo huerto asignando un código de dispositivo IoT.
-* `GET /`: Lista los huertos (Dueños ven los suyos; Agricultores ven los asignados).
-* `GET /:id`: Detalle completo de un huerto.
-* `PUT /:id`: Actualiza parámetros del huerto o umbrales de sensores.
-* `DELETE /:id`: Elimina el registro de un huerto.
-* `POST /agricultor/:id`: Vincula a un agricultor con un huerto específico mediante su email.
+* `POST /`: Crear huerto y asignar código de dispositivo.
+* `GET /`: Listar huertos (Filtra automáticamente por Administrador o Agricultor asignado).
+* `POST /agricultor/:id`: Vincular un agricultor a un huerto mediante correo electrónico.
+
+### 📡 Sensores e IoT (`/api/sensores`)
+* `POST /`: Registro de nuevo sensor en el sistema.
+* `POST /data`: Ingesta de métricas (Temperatura/Humedad) desde dispositivos ESP32.
+* `GET /stats/:sensorId`: Obtener estadísticas agregadas para gráficas (Soporta filtrado por rangos de tiempo).
+
+### 💳 Pagos (`/api/pagos`)
+* `POST /crear-sesion`: Genera una sesión de Stripe Checkout para suscripciones a planes avanzados.
 
 ---
 
-## 📡 Integración IoT (Aun en estado de prueba)
-El sistema está diseñado para recibir datos automáticos de sensores a través de dispositivos **ESP32**.
-
-* **Endpoint de Sensores:** `POST /api/huertos/actualizar-datos`.
-* **Payload esperado de ejemplo:**
+## 🔌 Integración en Tiempo Real (WebSockets)
+La API utiliza **Socket.io** para emitir eventos cada vez que un sensor envía datos, permitiendo actualizaciones en el frontend sin recargar:
+* **Evento:** `sensor:data`
+* **Payload de ejemplo:**
 ```json
 {
-  "codigoDispositivo": "SENSOR-ESP32-001",
-  "temperatura": 24.5,
-  "humedad": 60.2
+  "huertoId": "65b...",
+  "codigo": "ESP32-001",
+  "temperatura": 25.4,
+  "humedad": 65,
+  "timestamp": "2026-02-02T16:00:00Z"
 }
