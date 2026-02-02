@@ -1,9 +1,9 @@
 import Sensor from '../models/Sensor.js';
 import Measurement from '../models/Measurement.js';
 import Huerto from '../models/Huerto.js';
+import mongoose from 'mongoose';
 
-// --- INGESTA DE DATOS (Simulación Arduino/ESP32) ---
-// Endpoint: POST /api/sensores/data
+
 const addMeasurement = async (req, res) => {
     // 1. Recibimos el payload. 
     // Nota: Adaptado para recibir un array de métricas o una sola, flexible para el ESP32.
@@ -80,30 +80,28 @@ const addMeasurement = async (req, res) => {
     }
 };
 
-// --- CONSULTA PARA DASHBOARD (Aggregation Framework) ---
-// Endpoint: GET /api/sensores/stats/:sensorId
 const getSensorStats = async (req, res) => {
-    const { sensorId } = req.params;
-    const { type, rango } = req.query; // type: 'temperatura' | 'humedad', rango: '24h' | '7d'
+    const sensorId = req.params.sensorId.trim(); 
+    const { type, rango } = req.query;
 
-    // Definir ventana de tiempo
+    if (!mongoose.Types.ObjectId.isValid(sensorId)) {
+        return res.status(400).json({ msg: 'El ID del sensor no es válido' });
+    }
+
     let startDate = new Date();
     if (rango === '7d') startDate.setDate(startDate.getDate() - 7);
-    else startDate.setHours(startDate.getHours() - 24); // Default 24h
+    else startDate.setHours(startDate.getHours() - 24);
 
     try {
         const stats = await Measurement.aggregate([
-            // ETAPA 1: Filtrado ($match)
-            // Aprovecha el índice clustered de Time Series para ser ultra-rápido
             {
                 $match: {
+                    // Ahora usamos el ID validado
                     "metadata.sensor_id": new mongoose.Types.ObjectId(sensorId),
-                    "metadata.type": type || 'temperatura', // Default a temperatura
+                    "metadata.type": type || 'temperatura',
                     timestamp: { $gte: startDate }
                 }
             },
-            // ETAPA 2: Agrupamiento temporal ($group + $dateTrunc)
-            // Aquí ocurre el "Downsampling". Convertimos miles de puntos en 1 punto por hora.
             {
                 $group: {
                     _id: {
@@ -120,11 +118,7 @@ const getSensorStats = async (req, res) => {
                     count: { $sum: 1 } // Útil para saber si hubo desconexiones (pocos datos en la hora)
                 }
             },
-            // ETAPA 3: Ordenamiento ($sort)
-            // Necesario para que la gráfica en React se dibuje de izquierda a derecha
             { $sort: { _id: 1 } },
-            // ETAPA 4: Proyección ($project)
-            // Formateamos la salida para que sea fácil de consumir por Recharts/Chart.js
             {
                 $project: {
                     _id: 0,
@@ -144,4 +138,21 @@ const getSensorStats = async (req, res) => {
     }
 };
 
-export { addMeasurement, getSensorStats };
+const registrarSensor = async (req, res) => {
+    try {
+        const sensor = new Sensor(req.body);
+        const sensorAlmacenado = await sensor.save();
+        res.status(201).json(sensorAlmacenado);
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ msg: 'Este código de dispositivo ya existe' });
+        }
+        res.status(500).json({ msg: 'Error al registrar el sensor' });
+    }
+};
+
+export { 
+    addMeasurement, 
+    getSensorStats, 
+    registrarSensor 
+};
