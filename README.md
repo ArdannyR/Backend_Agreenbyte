@@ -63,3 +63,26 @@ La API utiliza **Socket.io** para emitir eventos cada vez que un sensor envía d
   "humedad": 65,
   "timestamp": "2026-02-02T16:00:00Z"
 }
+
+## 📬 Documentación de Postman
+
+A continuación se detallan los módulos disponibles en la documentación de Postman para la API de **Agreenbyte**:
+
+### 👤 Mod - Administrador
+🔗 https://documenter.getpostman.com/view/49837760/2sB3dLVXVK
+
+### 👨‍🌾 Mod - Agricultor
+🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Ao
+
+### 🏡 Mod - Huerto
+🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Aq
+
+### 💳 Mod - Pagos
+🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4At
+
+### 📡 Mod - Sensor
+🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4F9
+
+### 🔐 Autenticación con Google
+🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4FE
+
