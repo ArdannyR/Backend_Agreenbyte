@@ -63,6 +63,7 @@ const addMeasurement = async (req, res) => {
 
         // 6. Emitir Socket.io (Mantenemos tu funcionalidad de tiempo real)
         if (req.io) {
+            console.log("Emitiendo datos al socket para el huerto:", sensor.huerto);
             req.io.emit('sensor:data', {
                 huertoId: sensor.huerto,
                 codigo: codigoDispositivo,

@@ -32,9 +32,16 @@ const app = express();
 const server = http.createServer(app);
 
 // Configurar Socket.io
+/*const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || "*", // Permitimos el origen del frontend (apagado por pruebas de back)
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});*/
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || "*", // Permitimos el origen del frontend
+        origin: "*", // Cambia esto temporalmente para la prueba
         methods: ["GET", "POST"],
         credentials: true
     }
