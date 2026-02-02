@@ -50,6 +50,28 @@ Sistema de gestión y monitoreo inteligente para huertos, conectando administrad
 * `POST /crear-sesion`: Genera una sesión de Stripe Checkout para suscripciones a planes avanzados.
 
 ---
+## 📬 Documentación de Postman
+A continuación se detallan los módulos disponibles en la documentación de Postman para la API de **Agreenbyte**:
+
+  ### 👤 Mod - Administrador
+    🔗 https://documenter.getpostman.com/view/49837760/2sB3dLVXVK
+
+  ### 👨‍🌾 Mod - Agricultor
+    🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Ao
+  
+  ### 🏡 Mod - Huerto
+    🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Aq
+  
+  ### 💳 Mod - Pagos
+    🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4At
+  
+  ### 📡 Mod - Sensor
+    🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4F9
+  
+  ### 🔐 Autenticación con Google
+    🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4FE
+
+--- 
 
 ## 🔌 Integración en Tiempo Real (WebSockets)
 La API utiliza **Socket.io** para emitir eventos cada vez que un sensor envía datos, permitiendo actualizaciones en el frontend sin recargar:
@@ -64,25 +86,4 @@ La API utiliza **Socket.io** para emitir eventos cada vez que un sensor envía d
   "timestamp": "2026-02-02T16:00:00Z"
 }
 
-## 📬 Documentación de Postman
-
-A continuación se detallan los módulos disponibles en la documentación de Postman para la API de **Agreenbyte**:
-
-### 👤 Mod - Administrador
-🔗 https://documenter.getpostman.com/view/49837760/2sB3dLVXVK
-
-### 👨‍🌾 Mod - Agricultor
-🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Ao
-
-### 🏡 Mod - Huerto
-🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4Aq
-
-### 💳 Mod - Pagos
-🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4At
-
-### 📡 Mod - Sensor
-🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4F9
-
-### 🔐 Autenticación con Google
-🔗 https://documenter.getpostman.com/view/49837760/2sBXc7K4FE
 
