@@ -4,19 +4,23 @@ import Huerto from '../models/Huerto.js';
 import { generarId, generarJWT } from '../helpers/generarToken.js';
 import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 
-// ... (registrar, autenticar, perfil, obtenerAgricultores, obtenerMisHuertos se mantienen igual) ...
 const registrar = async (req, res) => {
   const { email } = req.body;
+
+  // 1. Verificar si ya existe como Agricultor
   const existeAgricultor = await Agricultor.findOne({ email });
   if (existeAgricultor) {
     const error = new Error('Usuario ya registrado');
     return res.status(400).json({ msg: error.message });
   }
+
+  // 2. Verificar si ya existe como Administrador (VALIDACIÓN CRUZADA)
   const existeAdmin = await Administrador.findOne({ email });
   if (existeAdmin) {
     const error = new Error('Este correo ya está registrado como Administrador');
     return res.status(400).json({ msg: error.message });
   }
+
   try {
     const agricultor = new Agricultor(req.body);
     agricultor.token = generarId();
@@ -27,6 +31,8 @@ const registrar = async (req, res) => {
     res.status(500).json({ msg: 'Error al registrar el agricultor' });
   }
 };
+
+// ... (El resto de las funciones se mantienen igual que en tu última versión: autenticar, perfil, obtenerAgricultores, obtenerMisHuertos, eliminarAgricultor, actualizarPerfil, olvidePassword, comprobarToken, nuevoPassword) ...
 
 const autenticar = async (req, res) => {
   const { email, password } = req.body;
@@ -44,7 +50,8 @@ const autenticar = async (req, res) => {
       _id: usuario._id,
       nombre: usuario.nombre,
       email: usuario.email,
-      token: generarJWT(usuario._id), 
+      role: 'agricultor', 
+      token: generarJWT(usuario._id),
     });
   } else {
     const error = new Error('Password incorrecto');
@@ -79,27 +86,19 @@ const obtenerMisHuertos = async (req, res) => {
     }
 }
 
-// --- FUNCIÓN ELIMINAR AGRICULTOR MEJORADA (LIMPIEZA DE REFERENCIAS) ---
 const eliminarAgricultor = async (req, res) => {
     const { id } = req.params;
     try {
         const agricultor = await Agricultor.findById(id);
-        
         if (!agricultor) {
             return res.status(404).json({ msg: 'Agricultor no encontrado' });
         }
-
-        // Paso 1: Eliminar al agricultor de la lista de agricultores en TODOS los huertos
-        // Usamos $pull para sacar el ID del array 'agricultores'
         await Huerto.updateMany(
             { agricultores: id }, 
             { $pull: { agricultores: id } }
         );
-
-        // Paso 2: Eliminar el documento del agricultor
         await agricultor.deleteOne();
-        
-        res.json({ msg: 'Agricultor eliminado y desvinculado correctamente' });
+        res.json({ msg: 'Agricultor eliminado correctamente' });
     } catch (error) {
         console.log(error);
         res.status(500).json({ msg: 'Error al eliminar agricultor' });

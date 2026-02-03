@@ -1,5 +1,5 @@
 import Administrador from '../models/Administrador.js'; 
-import Agricultor from '../models/Agricultor.js'; 
+import Agricultor from '../models/Agricultor.js'; // Importar modelo Agricultor
 import { generarId, generarJWT } from '../helpers/generarToken.js';
 import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 import { OAuth2Client } from 'google-auth-library';
@@ -30,15 +30,14 @@ const googleLogin = async (req, res) => {
             usuario = new Administrador({
                 nombre: name,
                 email: email,
-                password: ':)', // Contraseña placeholder
+                password: ':)', 
                 confirmado: true,
-                google: true // Marcamos que es usuario de Google
+                google: true
             });
             await usuario.save();
         } else {
-            // Si el usuario ya existía pero no era de Google, lo actualizamos
             usuario.google = true;
-            usuario.confirmado = true; // Google verifica el email
+            usuario.confirmado = true;
             await usuario.save();
         }
 
@@ -51,19 +50,21 @@ const googleLogin = async (req, res) => {
 
     } catch (error) {
         console.error("Error al verificar token de Google:", error);
-        res.status(403).json({ msg: "Token de Google no válido o expirado" });
+        res.status(403).json({ msg: "Token de Google no válido" });
     }
 };
 
 const registrar = async (req, res) => {
   const { nombre, email, password } = req.body;
 
+  // 1. Verificar si ya existe como Administrador
   const existeAdmin = await Administrador.findOne({ email });
   if (existeAdmin) {
     const error = new Error('Email ya registrado como Administrador.');
     return res.status(400).json({ msg: error.message });
   }
 
+  // 2. Verificar si ya existe como Agricultor (VALIDACIÓN CRUZADA)
   const existeAgricultor = await Agricultor.findOne({ email });
   if (existeAgricultor) {
     const error = new Error('Este email ya pertenece a un Agricultor.');
@@ -92,6 +93,9 @@ const registrar = async (req, res) => {
     res.status(500).json({ msg: 'Error al registrar' });
   }
 };
+
+// ... resto de funciones (confirmarCuenta, autenticar, perfil, olvidePassword, etc.) ...
+// Asegúrate de copiar el resto del archivo original o usar el que ya tenías, solo cambiamos registrar y googleLogin
 
 const confirmarCuenta = async (req, res) => {
   const { token } = req.params;
@@ -122,11 +126,8 @@ const autenticar = async (req, res) => {
     return res.status(404).json({ msg: error.message });
   }
 
-  // Si es usuario de Google, le decimos que use el botón
-  if (usuario.google && password !== ':)') { // Permitir password normal si lo cambia después
-      // Nota: Si el usuario creó cuenta con Google, su password es ':)' y bcrypt fallará o dará falso.
-      // Aquí podrías forzar el uso de Google, pero lo mejor es dejar que compruebe la contraseña.
-      // Si la contraseña es ':)', bcrypt.compare fallará con cualquier input normal.
+  if (usuario.google && password !== ':)') { 
+      // Opcional: Avisar si intenta entrar con password normal
   }
 
   if (!usuario.confirmado) {
@@ -174,7 +175,7 @@ const olvidePassword = async (req, res) => {
       email: usuario.email,
       nombre: usuario.nombre,
       token: usuario.token,
-      rol: 'admin'
+      rol: 'admin' // Importante para el email correcto
     });
 
     res.json({ msg: 'Hemos enviado un email con las instrucciones.', token: usuario.token});
@@ -239,7 +240,7 @@ const actualizarPerfil = async (req, res) => {
 
   administrador.nombre = nombre || administrador.nombre;
   administrador.email = email || administrador.email;
-  // Campos extra si el modelo lo permite
+  // Campos extra
   if (apellido) administrador.apellido = apellido;
   if (telefono) administrador.telefono = telefono;
   if (direccion) administrador.direccion = direccion;
