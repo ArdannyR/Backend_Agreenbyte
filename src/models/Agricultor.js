@@ -18,10 +18,26 @@ const agricultorSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    telefono: {
+        type: String,
+        default: null,
+        trim: true
+    },
+    direccion: {
+        type: String,
+        default: null,
+        trim: true
+    },
     token: {
       type: String,
       default: ''
     },
+
+    tokenExpires: {
+        type: Date,
+        default: null
+    },
+
     confirmado: {
       type: Boolean,
       default: true,
@@ -41,7 +57,6 @@ agricultorSchema.pre('save', async function (next) {
   next();
 });
 
-// Comprobar password
 agricultorSchema.methods.comprobarPassword = async function (passwordFormulario) {
   return await bcrypt.compare(passwordFormulario, this.password);
 };

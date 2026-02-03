@@ -8,21 +8,6 @@ const administradorSchema = mongoose.Schema(
       required: true,
       trim: true,
     },
-    apellido: {
-      type: String,
-      trim: true,
-      default: ''
-    },
-    telefono: {
-      type: String,
-      trim: true,
-      default: ''
-    },
-    direccion: {
-      type: String,
-      trim: true,
-      default: ''
-    },
     email: {
       type: String,
       required: true,
@@ -33,16 +18,31 @@ const administradorSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    telefono: {
+        type: String,
+        default: null,
+        trim: true
+    },
+    direccion: {
+        type: String,
+        default: null,
+        trim: true
+    },
     token: {
       type: String,
+      default: ''
+    },
+    tokenExpires: {
+        type: Date,
+        default: null
     },
     confirmado: {
       type: Boolean,
       default: false,
     },
-    tokenExpires: {
-      type: Date, 
-      default: null
+    google: {
+        type: Boolean,
+        default: false
     }
   },
   {

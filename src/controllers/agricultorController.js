@@ -1,29 +1,27 @@
 import Agricultor from '../models/Agricultor.js';
+import Administrador from '../models/Administrador.js'; 
+import Huerto from '../models/Huerto.js';
 import { generarId, generarJWT } from '../helpers/generarToken.js';
-import { emailRegistro, emailOlvidePassword } from '../helpers/email.js'; // Puedes reutilizar los mismos helpers o crear nuevos si quieres cambiar el texto del correo
+import { emailRegistro, emailOlvidePassword } from '../helpers/email.js';
 
+// ... (registrar, autenticar, perfil, obtenerAgricultores, obtenerMisHuertos se mantienen igual) ...
 const registrar = async (req, res) => {
-  const { nombre, email, password } = req.body;
-
-  // Evitar duplicados
-  const existeUsuario = await Agricultor.findOne({ email });
-  if (existeUsuario) {
+  const { email } = req.body;
+  const existeAgricultor = await Agricultor.findOne({ email });
+  if (existeAgricultor) {
     const error = new Error('Usuario ya registrado');
     return res.status(400).json({ msg: error.message });
   }
-
+  const existeAdmin = await Administrador.findOne({ email });
+  if (existeAdmin) {
+    const error = new Error('Este correo ya está registrado como Administrador');
+    return res.status(400).json({ msg: error.message });
+  }
   try {
     const agricultor = new Agricultor(req.body);
-    // Aunque confirmado sea true por defecto, generamos token por si decides activar confirmación por email a futuro
     agricultor.token = generarId();
-    
     await agricultor.save();
-
-    // Opcional: Enviar email de bienvenida o confirmación
-    // await emailRegistro({ email: agricultor.email, nombre: agricultor.nombre, token: agricultor.token });
-
-    res.json({ msg: 'Agricultor creado correctamente. Ya puedes iniciar sesión.' });
-
+    res.json({ msg: 'Agricultor creado correctamente', ...agricultor._doc });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: 'Error al registrar el agricultor' });
@@ -32,27 +30,21 @@ const registrar = async (req, res) => {
 
 const autenticar = async (req, res) => {
   const { email, password } = req.body;
-
-  // Comprobar si el usuario existe
   const usuario = await Agricultor.findOne({ email });
   if (!usuario) {
     const error = new Error('El usuario no existe');
     return res.status(404).json({ msg: error.message });
   }
-
-  // Comprobar si está confirmado
   if (!usuario.confirmado) {
     const error = new Error('Tu cuenta no ha sido confirmada');
     return res.status(403).json({ msg: error.message });
   }
-
-  // Comprobar su password
   if (await usuario.comprobarPassword(password)) {
     res.json({
       _id: usuario._id,
       nombre: usuario.nombre,
       email: usuario.email,
-      token: generarJWT(usuario._id), // Generamos el token de sesión
+      token: generarJWT(usuario._id), 
     });
   } else {
     const error = new Error('Password incorrecto');
@@ -61,33 +53,102 @@ const autenticar = async (req, res) => {
 };
 
 const perfil = (req, res) => {
-  // El middleware checkAuth ya colocó al agricultor en req.agricultor
   const { agricultor } = req;
   res.json(agricultor);
 };
 
-// --- Funciones de Recuperación de Contraseña (Opcional pero recomendado) ---
+const obtenerAgricultores = async (req, res) => {
+    try {
+        const agricultores = await Agricultor.find().select('-password -token -confirmado'); 
+        res.json(agricultores);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: 'Hubo un error al obtener los agricultores' });
+    }
+};
+
+const obtenerMisHuertos = async (req, res) => {
+    try {
+        const huertos = await Huerto.find({ 
+            agricultores: req.agricultor._id 
+        });
+        res.json(huertos);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: 'Error al obtener huertos' });
+    }
+}
+
+// --- FUNCIÓN ELIMINAR AGRICULTOR MEJORADA (LIMPIEZA DE REFERENCIAS) ---
+const eliminarAgricultor = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const agricultor = await Agricultor.findById(id);
+        
+        if (!agricultor) {
+            return res.status(404).json({ msg: 'Agricultor no encontrado' });
+        }
+
+        // Paso 1: Eliminar al agricultor de la lista de agricultores en TODOS los huertos
+        // Usamos $pull para sacar el ID del array 'agricultores'
+        await Huerto.updateMany(
+            { agricultores: id }, 
+            { $pull: { agricultores: id } }
+        );
+
+        // Paso 2: Eliminar el documento del agricultor
+        await agricultor.deleteOne();
+        
+        res.json({ msg: 'Agricultor eliminado y desvinculado correctamente' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: 'Error al eliminar agricultor' });
+    }
+};
+
+const actualizarPerfil = async (req, res) => {
+    const agricultor = await Agricultor.findById(req.agricultor._id);
+    if (!agricultor) {
+        return res.status(404).json({ msg: 'Agricultor no encontrado' });
+    }
+    const { email } = req.body;
+    if (agricultor.email !== req.body.email) {
+        const existeEmailAgri = await Agricultor.findOne({ email });
+        const existeEmailAdmin = await Administrador.findOne({ email });
+        if (existeEmailAgri || existeEmailAdmin) {
+            return res.status(400).json({ msg: 'Ese email ya está en uso' });
+        }
+    }
+    agricultor.nombre = req.body.nombre || agricultor.nombre;
+    agricultor.email = req.body.email || agricultor.email;
+    agricultor.telefono = req.body.telefono || agricultor.telefono;
+    agricultor.direccion = req.body.direccion || agricultor.direccion;
+    try {
+        const agricultorActualizado = await agricultor.save();
+        res.json(agricultorActualizado);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: 'Hubo un error al actualizar' });
+    }
+};
 
 const olvidePassword = async (req, res) => {
   const { email } = req.body;
   const usuario = await Agricultor.findOne({ email });
-  
   if (!usuario) {
     const error = new Error('El usuario no existe');
     return res.status(404).json({ msg: error.message });
   }
-
   try {
     usuario.token = generarId();
+    usuario.tokenExpires = Date.now() + 3600000;
     await usuario.save();
-
-    // Reutilizamos el helper de email (asegúrate que el link en el email apunte a la ruta correcta del frontend)
     await emailOlvidePassword({
       email: usuario.email,
       nombre: usuario.nombre,
-      token: usuario.token
+      token: usuario.token,
+      rol: 'agricultor'
     });
-
     res.json({ msg: 'Hemos enviado un email con las instrucciones' });
   } catch (error) {
     console.log(error);
@@ -97,12 +158,14 @@ const olvidePassword = async (req, res) => {
 
 const comprobarToken = async (req, res) => {
   const { token } = req.params;
-  const tokenValido = await Agricultor.findOne({ token });
-
+  const tokenValido = await Agricultor.findOne({ 
+      token, 
+      tokenExpires: { $gt: Date.now() } 
+  });
   if (tokenValido) {
     res.json({ msg: 'Token válido y el usuario existe' });
   } else {
-    const error = new Error('Token no válido');
+    const error = new Error('Token no válido o expirado');
     return res.status(404).json({ msg: error.message });
   }
 };
@@ -110,12 +173,14 @@ const comprobarToken = async (req, res) => {
 const nuevoPassword = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
-
-  const usuario = await Agricultor.findOne({ token });
-
+  const usuario = await Agricultor.findOne({ 
+      token, 
+      tokenExpires: { $gt: Date.now() } 
+  });
   if (usuario) {
     usuario.password = password;
     usuario.token = '';
+    usuario.tokenExpires = null;
     try {
       await usuario.save();
       res.json({ msg: 'Password modificado correctamente' });
@@ -123,7 +188,7 @@ const nuevoPassword = async (req, res) => {
       console.log(error);
     }
   } else {
-    const error = new Error('Token no válido');
+    const error = new Error('Token no válido o expirado');
     return res.status(404).json({ msg: error.message });
   }
 };
@@ -134,5 +199,9 @@ export {
   perfil,
   olvidePassword,
   comprobarToken,
-  nuevoPassword
+  nuevoPassword,
+  obtenerAgricultores,
+  obtenerMisHuertos,
+  eliminarAgricultor,
+  actualizarPerfil
 };

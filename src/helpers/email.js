@@ -59,6 +59,13 @@ const enviarCorreoHibrido = async (opcionesEmail) => {
 export const emailRegistro = async (datos) => {
   const { email, nombre, token } = datos;
 
+  // Determinar la URL del frontend basada en el entorno
+  const frontendUrl = process.env.NODE_ENV === 'production' 
+    ? process.env.URL_FRONTEND_PROD 
+    : process.env.URL_FRONTEND_LOCAL;
+
+  console.log(`🔗 Generando enlace de confirmación para: ${frontendUrl}`);
+
   await enviarCorreoHibrido({
     from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
     to: email,
@@ -67,14 +74,26 @@ export const emailRegistro = async (datos) => {
     html: `
       <p>Hola: ${nombre}, has creado tu cuenta en Agreenbyte.</p>
       <p>Tu cuenta ya está casi lista, solo debes comprobarla en el siguiente enlace:</p>
-      <a href="${process.env.FRONTEND_URL}/confirmar/${token}">Comprobar Cuenta</a>
+      <a href="${frontendUrl}/confirmar/${token}">Comprobar Cuenta</a>
       <p>Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
     `
   });
 };
 
 export const emailOlvidePassword = async (datos) => {
-  const { email, nombre, token } = datos;
+  const { email, nombre, token, rol } = datos; // ACEPTAMOS 'rol'
+
+  // Determinar la URL del frontend basada en el entorno
+  const frontendUrl = process.env.NODE_ENV === 'production' 
+    ? process.env.URL_FRONTEND_PROD 
+    : process.env.URL_FRONTEND_LOCAL;
+
+  console.log(`🔗 Generando enlace de recuperación para: ${frontendUrl}`);
+
+  // Construimos la URL con el parámetro 'rol' si existe
+  const enlace = rol 
+    ? `${frontendUrl}/olvide-password/${token}?rol=${rol}`
+    : `${frontendUrl}/olvide-password/${token}`;
 
   await enviarCorreoHibrido({
     from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
@@ -84,7 +103,7 @@ export const emailOlvidePassword = async (datos) => {
     html: `
       <p>Hola: ${nombre}, has solicitado reestablecer tu password.</p>
       <p>Sigue el siguiente enlace para generar un nuevo password:</p>
-      <a href="${process.env.FRONTEND_URL}/olvide-password/${token}">Reestablecer Password</a>
+      <a href="${enlace}">Reestablecer Password</a>
       <p>Si tú no solicitaste este email, puedes ignorar este mensaje.</p>
     `
   });
