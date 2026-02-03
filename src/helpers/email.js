@@ -46,30 +46,8 @@ const enviarEmailHibrido = async (datos) => {
     return infoGmail;
 
   } catch (errorGmail) {
-    // 2. SI GMAIL FALLA, INTENTAMOS LOS OTROS (Respaldos)
-    console.warn(`⚠️ GMAIL falló: ${errorGmail.message}. Intentando respaldos...`);
 
-    try {
-      // INTENTO CON MAILERSEND
-      // Recuerda: Esto solo funcionará si verificas el dominio en MailerSend
-      const senderEmail = "TU_CORREO_TRIAL_AQUI@trial-xxxx.mlsender.net"; // <--- CAMBIA ESTO SI QUIERES USARLO
-      const sentFrom = new Sender(senderEmail, "Agreenbyte 🌿");
-      const recipients = [new Recipient(email, nombre)];
-
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setSubject(asunto)
-        .setHtml(mensajeHtml);
-
-      const infoMS = await mailerSend.email.send(emailParams);
-      console.log(`✅ Enviado con MAILERSEND. ID: ${infoMS.headers['x-message-id']}`);
-      return infoMS;
-
-    } catch (errorMailerSend) {
-      console.warn(`⚠️ MAILERSEND falló. Intentando con BREVO...`);
-
-      // 3. INTENTO FINAL CON BREVO
+      // 3. INTENTO CON BREVO
       try {
         const sendSmtpEmail = new sibApiV3Sdk.SendSmtpEmail();
         sendSmtpEmail.subject = asunto;
@@ -86,8 +64,7 @@ const enviarEmailHibrido = async (datos) => {
         throw new Error("Error crítico: No se pudo enviar el correo por ningún medio.");
       }
     }
-  }
-};
+  };
 
 // --- FUNCIONES EXPORTADAS (Sin cambios) ---
 
