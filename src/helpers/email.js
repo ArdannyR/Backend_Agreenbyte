@@ -1,93 +1,80 @@
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// --- CONFIGURACIÓN DE TRANSPORTERS ---
+// --- CONFIGURACIÓN PARA API BREVO (HTTP) ---
+// Usamos la API REST en lugar de SMTP para evitar bloqueos de puertos en Render/Cloud.
 
-// Configuración optimizada para timeouts
-const mailConfig = {
-    connectionTimeout: 10000, // 10 segundos para conectar
-    greetingTimeout: 10000,   // 10 segundos para saludo
-    socketTimeout: 10000,     // 10 segundos para socket
-};
-
-// 1. Principal: BREVO
-const transportBrevo = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // TLS explícito
-  auth: {
-    user: process.env.BREVO_USER, 
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-  tls: {
-    rejectUnauthorized: false,
-    ciphers: 'SSLv3'
-  },
-  ...mailConfig
-});
-
-// 2. Respaldo: GMAIL
-const transportGmail = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: 465,
-  secure: true, // SSL implícito
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  ...mailConfig
-});
-
-// --- FUNCIÓN DE ENVÍO HÍBRIDO ---
-const enviarCorreoHibrido = async (opcionesEmail) => {
-  console.log(`📨 Iniciando envío de correo a: ${opcionesEmail.to}`);
+const enviarEmailBrevo = async (datos) => {
+  const { email, nombre, asunto, mensajeHtml } = datos;
   
+  const apiKey = process.env.BREVO_SMTP_KEY; // Tu API Key de Brevo
+  const url = 'https://api.brevo.com/v3/smtp/email';
+
+  const body = {
+    sender: {
+      name: "Agreenbyte - Administrador",
+      email: process.env.BREVO_USER // Tu email verificado en Brevo
+    },
+    to: [
+      {
+        email: email,
+        name: nombre
+      }
+    ],
+    subject: asunto,
+    htmlContent: mensajeHtml
+  };
+
   try {
-    // Intento 1: Brevo
-    console.log("🚀 Intentando enviar con Brevo (Puerto 587)...");
-    const info = await transportBrevo.sendMail(opcionesEmail);
-    console.log("✅ Correo enviado con Brevo ID:", info.messageId);
-    return info;
+    console.log(`🚀 Enviando email a ${email} vía API Brevo...`);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error API Brevo: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    console.log(`✅ Email enviado correctamente. ID: ${data.messageId}`);
+    return data;
 
   } catch (error) {
-    console.error(`⚠️ Falló Brevo: ${error.message} (Code: ${error.code})`);
-    console.log("🔄 Cambiando a servidor de respaldo (Gmail Puerto 465)...");
-
-    try {
-      // Intento 2: Gmail (Respaldo)
-      const infoBackup = await transportGmail.sendMail(opcionesEmail);
-      console.log("✅ Correo enviado con Gmail (Respaldo) ID:", infoBackup.messageId);
-      return infoBackup;
-
-    } catch (errorBackup) {
-      console.error("❌ Fallaron ambos servidores de correo.");
-      console.error(`Error Gmail: ${errorBackup.message} (Code: ${errorBackup.code})`);
-      throw new Error("No se pudo enviar el email por ningún medio. Verifique conexión saliente.");
-    }
+    console.error("❌ Error enviando email:", error.message);
+    // Si falla, podrías intentar un fallback aquí, pero la API es muy estable.
+    throw error;
   }
 };
 
 export const emailRegistro = async (datos) => {
   const { email, nombre, token } = datos;
 
-  // Determinar la URL del frontend basada en el entorno
   const frontendUrl = process.env.NODE_ENV === 'production' 
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
-  console.log(`🔗 Link generado: ${frontendUrl}/confirmar/${token}`);
+  console.log(`🔗 Link Registro: ${frontendUrl}/confirmar/${token}`);
 
-  await enviarCorreoHibrido({
-    from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
-    to: email,
-    subject: "Agreenbyte - Comprueba tu cuenta",
-    text: "Comprueba tu cuenta en Agreenbyte",
-    html: `
-      <p>Hola: ${nombre}, has creado tu cuenta en Agreenbyte.</p>
-      <p>Tu cuenta ya está casi lista, solo debes comprobarla en el siguiente enlace:</p>
-      <a href="${frontendUrl}/confirmar/${token}">Comprobar Cuenta</a>
-      <p>Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
+  await enviarEmailBrevo({
+    email,
+    nombre,
+    asunto: "Agreenbyte - Comprueba tu cuenta",
+    mensajeHtml: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #16a34a;">¡Hola ${nombre}!</h2>
+        <p>Has creado tu cuenta en Agreenbyte. Ya casi está lista.</p>
+        <p>Solo debes comprobarla en el siguiente enlace:</p>
+        <a href="${frontendUrl}/confirmar/${token}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Comprobar Cuenta</a>
+        <p style="margin-top: 20px; font-size: 12px; color: #666;">Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
+      </div>
     `
   });
 };
@@ -95,28 +82,28 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
   const { email, nombre, token, rol } = datos;
 
-  // Determinar la URL del frontend basada en el entorno
   const frontendUrl = process.env.NODE_ENV === 'production' 
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
-  // Construimos la URL con el parámetro 'rol' si existe
   const enlace = rol 
     ? `${frontendUrl}/olvide-password/${token}?rol=${rol}`
     : `${frontendUrl}/olvide-password/${token}`;
 
-  console.log(`🔗 Link recuperación generado: ${enlace}`);
+  console.log(`🔗 Link Recuperación: ${enlace}`);
 
-  await enviarCorreoHibrido({
-    from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
-    to: email,
-    subject: "Agreenbyte - Reestablece tu Password",
-    text: "Reestablece tu Password",
-    html: `
-      <p>Hola: ${nombre}, has solicitado reestablecer tu password.</p>
-      <p>Sigue el siguiente enlace para generar un nuevo password:</p>
-      <a href="${enlace}">Reestablecer Password</a>
-      <p>Si tú no solicitaste este email, puedes ignorar este mensaje.</p>
+  await enviarEmailBrevo({
+    email,
+    nombre,
+    asunto: "Agreenbyte - Reestablece tu Password",
+    mensajeHtml: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #16a34a;">Hola ${nombre},</h2>
+        <p>Has solicitado reestablecer tu password.</p>
+        <p>Sigue el siguiente enlace para generar uno nuevo:</p>
+        <a href="${enlace}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Reestablecer Password</a>
+        <p style="margin-top: 20px; font-size: 12px; color: #666;">Si tú no solicitaste este email, ignora este mensaje.</p>
+      </div>
     `
   });
 };
