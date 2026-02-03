@@ -1,19 +1,25 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// --- CONFIGURACIÓN PARA API BREVO (HTTP) ---
-// Usamos la API REST en lugar de SMTP para evitar bloqueos de puertos en Render/Cloud.
+// --- CONFIGURACIÓN PARA API BREVO (HTTP - PUERTO 443) ---
+// Documentación: https://developers.brevo.com/reference/sendtransacemail
 
 const enviarEmailBrevo = async (datos) => {
   const { email, nombre, asunto, mensajeHtml } = datos;
   
-  const apiKey = process.env.BREVO_SMTP_KEY; // Tu API Key de Brevo
+  const apiKey = process.env.BREVO_SMTP_KEY; 
   const url = 'https://api.brevo.com/v3/smtp/email';
 
+  if (!apiKey) {
+      console.error("❌ ERROR CRÍTICO: Falta BREVO_SMTP_KEY.");
+      throw new Error("Configuración de correo faltante.");
+  }
+
+  // Cuerpo de la petición según la API v3 de Brevo
   const body = {
     sender: {
-      name: "Agreenbyte - Administrador",
-      email: process.env.BREVO_USER // Tu email verificado en Brevo
+      name: "Agreenbyte",
+      email: process.env.BREVO_USER // Debe ser un email validado en Brevo
     },
     to: [
       {
@@ -26,8 +32,12 @@ const enviarEmailBrevo = async (datos) => {
   };
 
   try {
-    console.log(`🚀 Enviando email a ${email} vía API Brevo...`);
+    console.log(`🚀 [API] Iniciando envío a ${email}...`);
     
+    // Usamos fetch con un timeout manual
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -35,22 +45,25 @@ const enviarEmailBrevo = async (datos) => {
         'api-key': apiKey,
         'content-type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Error API Brevo: ${response.status} - ${JSON.stringify(errorData)}`);
+      const errorText = await response.text();
+      console.error(`❌ Error API Brevo (${response.status}):`, errorText);
+      throw new Error(`Fallo Brevo API: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log(`✅ Email enviado correctamente. ID: ${data.messageId}`);
+    console.log(`✅ Email enviado exitosamente. MessageID: ${data.messageId}`);
     return data;
 
   } catch (error) {
-    console.error("❌ Error enviando email:", error.message);
-    // Si falla, podrías intentar un fallback aquí, pero la API es muy estable.
-    throw error;
+    console.error("❌ Excepción al enviar email:", error.message);
+    throw error; 
   }
 };
 
@@ -61,7 +74,10 @@ export const emailRegistro = async (datos) => {
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
-  console.log(`🔗 Link Registro: ${frontendUrl}/confirmar/${token}`);
+  // Fallback de seguridad
+  const finalUrl = frontendUrl || 'https://agreenbyte.netlify.app';
+
+  console.log(`🔗 Link Registro: ${finalUrl}/confirmar/${token}`);
 
   await enviarEmailBrevo({
     email,
@@ -72,7 +88,7 @@ export const emailRegistro = async (datos) => {
         <h2 style="color: #16a34a;">¡Hola ${nombre}!</h2>
         <p>Has creado tu cuenta en Agreenbyte. Ya casi está lista.</p>
         <p>Solo debes comprobarla en el siguiente enlace:</p>
-        <a href="${frontendUrl}/confirmar/${token}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Comprobar Cuenta</a>
+        <a href="${finalUrl}/confirmar/${token}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Comprobar Cuenta</a>
         <p style="margin-top: 20px; font-size: 12px; color: #666;">Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
       </div>
     `
@@ -86,9 +102,11 @@ export const emailOlvidePassword = async (datos) => {
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
+  const finalUrl = frontendUrl || 'https://agreenbyte.netlify.app';
+
   const enlace = rol 
-    ? `${frontendUrl}/olvide-password/${token}?rol=${rol}`
-    : `${frontendUrl}/olvide-password/${token}`;
+    ? `${finalUrl}/olvide-password/${token}?rol=${rol}`
+    : `${finalUrl}/olvide-password/${token}`;
 
   console.log(`🔗 Link Recuperación: ${enlace}`);
 
