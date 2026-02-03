@@ -1,95 +1,84 @@
+import nodemailer from 'nodemailer';
+import * as sibApiV3Sdk from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// --- CONFIGURACIÓN PARA API BREVO (HTTP - PUERTO 443) ---
-// Documentación: https://developers.brevo.com/reference/sendtransacemail
-
-const enviarEmailBrevo = async (datos) => {
-  const { email, nombre, asunto, mensajeHtml } = datos;
-  
-  const apiKey = process.env.BREVO_SMTP_KEY; 
-  const url = 'https://api.brevo.com/v3/smtp/email';
-
-  if (!apiKey) {
-      console.error("❌ ERROR CRÍTICO: Falta BREVO_SMTP_KEY.");
-      throw new Error("Configuración de correo faltante.");
-  }
-
-  // Cuerpo de la petición según la API v3 de Brevo
-  const body = {
-    sender: {
-      name: "Agreenbyte",
-      email: process.env.BREVO_USER // Debe ser un email validado en Brevo
+// --- CONFIGURACIÓN DE GMAIL (Principal) ---
+const crearTransporteGmail = () => {
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: process.env.GMAIL_PORT,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
     },
-    to: [
-      {
-        email: email,
-        name: nombre
-      }
-    ],
-    subject: asunto,
-    htmlContent: mensajeHtml
-  };
-
-  try {
-    console.log(`🚀 [API] Iniciando envío a ${email}...`);
-    
-    // Usamos fetch con un timeout manual
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': apiKey,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Error API Brevo (${response.status}):`, errorText);
-      throw new Error(`Fallo Brevo API: ${response.status} - ${errorText}`);
+    tls: {
+      rejectUnauthorized: false // Soluciona el error de certificado self-signed
     }
+  });
+};
 
-    const data = await response.json();
-    console.log(`✅ Email enviado exitosamente. MessageID: ${data.messageId}`);
-    return data;
+// --- CONFIGURACIÓN DE BREVO (Respaldo) ---
+const apiInstance = new sibApiV3Sdk.TransactionalEmailsApi();
+apiInstance.setApiKey(sibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_SMTP_KEY);
 
-  } catch (error) {
-    console.error("❌ Excepción al enviar email:", error.message);
-    throw error; 
+/**
+ * LÓGICA HÍBRIDA: Intenta Gmail, si falla usa Brevo
+ */
+const enviarEmailHibrido = async (datos) => {
+  const { email, nombre, asunto, mensajeHtml } = datos;
+
+  // 1. INTENTO CON GMAIL
+  try {
+    console.log(`--- Intentando enviar vía GMAIL a: ${email} ---`);
+    const transport = crearTransporteGmail();
+    const info = await transport.sendMail({
+      from: `"Agreenbyte 🌿" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: asunto,
+      html: mensajeHtml,
+    });
+    console.log(`✅ Enviado con GMAIL. ID: ${info.messageId}`);
+    return info;
+
+  } catch (errorGmail) {
+    console.warn(`⚠️ GMAIL falló: ${errorGmail.message}. Iniciando respaldo con BREVO...`);
+
+    // 2. RESPALDO CON BREVO
+    try {
+      const sendSmtpEmail = new sibApiV3Sdk.SendSmtpEmail();
+      sendSmtpEmail.subject = asunto;
+      sendSmtpEmail.htmlContent = mensajeHtml;
+      sendSmtpEmail.sender = { name: "Agreenbyte", email: process.env.BREVO_USER };
+      sendSmtpEmail.to = [{ email, name: nombre }];
+
+      const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log(`✅ Enviado con BREVO (Respaldo). ID: ${data.body.messageId}`);
+      return data;
+
+    } catch (errorBrevo) {
+      console.error("❌ AMBOS servicios fallaron.");
+      throw new Error("Error crítico: No se pudo enviar el correo por ningún medio.");
+    }
   }
 };
 
+// --- FUNCIONES EXPORTADAS PARA TUS CONTROLADORES ---
+
 export const emailRegistro = async (datos) => {
   const { email, nombre, token } = datos;
+  const finalUrl = process.env.URL_FRONTEND_PROD || 'https://agreenbyte.netlify.app';
 
-  const frontendUrl = process.env.NODE_ENV === 'production' 
-    ? process.env.URL_FRONTEND_PROD 
-    : process.env.URL_FRONTEND_LOCAL;
-
-  // Fallback de seguridad
-  const finalUrl = frontendUrl || 'https://agreenbyte.netlify.app';
-
-  console.log(`🔗 Link Registro: ${finalUrl}/confirmar/${token}`);
-
-  await enviarEmailBrevo({
+  await enviarEmailHibrido({
     email,
     nombre,
     asunto: "Agreenbyte - Comprueba tu cuenta",
     mensajeHtml: `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
         <h2 style="color: #16a34a;">¡Hola ${nombre}!</h2>
-        <p>Has creado tu cuenta en Agreenbyte. Ya casi está lista.</p>
-        <p>Solo debes comprobarla en el siguiente enlace:</p>
-        <a href="${finalUrl}/confirmar/${token}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Comprobar Cuenta</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #666;">Si tú no creaste esta cuenta, puedes ignorar este mensaje.</p>
+        <p>Confirma tu cuenta en el siguiente enlace:</p>
+        <a href="${finalUrl}/confirmar/${token}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Comprobar Cuenta</a>
       </div>
     `
   });
@@ -97,30 +86,18 @@ export const emailRegistro = async (datos) => {
 
 export const emailOlvidePassword = async (datos) => {
   const { email, nombre, token, rol } = datos;
+  const finalUrl = process.env.URL_FRONTEND_PROD || 'https://agreenbyte.netlify.app';
+  const enlace = rol ? `${finalUrl}/olvide-password/${token}?rol=${rol}` : `${finalUrl}/olvide-password/${token}`;
 
-  const frontendUrl = process.env.NODE_ENV === 'production' 
-    ? process.env.URL_FRONTEND_PROD 
-    : process.env.URL_FRONTEND_LOCAL;
-
-  const finalUrl = frontendUrl || 'https://agreenbyte.netlify.app';
-
-  const enlace = rol 
-    ? `${finalUrl}/olvide-password/${token}?rol=${rol}`
-    : `${finalUrl}/olvide-password/${token}`;
-
-  console.log(`🔗 Link Recuperación: ${enlace}`);
-
-  await enviarEmailBrevo({
+  await enviarEmailHibrido({
     email,
     nombre,
-    asunto: "Agreenbyte - Reestablece tu Password",
+    asunto: "Agreenbyte - Restablece tu Password",
     mensajeHtml: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2 style="color: #16a34a;">Hola ${nombre},</h2>
-        <p>Has solicitado reestablecer tu password.</p>
-        <p>Sigue el siguiente enlace para generar uno nuevo:</p>
-        <a href="${enlace}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Reestablecer Password</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #666;">Si tú no solicitaste este email, ignora este mensaje.</p>
+        <p>Haz clic para generar una nueva contraseña:</p>
+        <a href="${enlace}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Restablecer Password</a>
       </div>
     `
   });
