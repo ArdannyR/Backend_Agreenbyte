@@ -4,43 +4,55 @@ dotenv.config();
 
 // --- CONFIGURACIÓN DE TRANSPORTERS ---
 
-// 1. Principal: BREVO (Corregido error de certificado)
+// Configuración optimizada para timeouts
+const mailConfig = {
+    connectionTimeout: 10000, // 10 segundos para conectar
+    greetingTimeout: 10000,   // 10 segundos para saludo
+    socketTimeout: 10000,     // 10 segundos para socket
+};
+
+// 1. Principal: BREVO
 const transportBrevo = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
-  port: 587, // Puerto estándar TLS
-  secure: false, 
+  port: 587,
+  secure: false, // TLS explícito
   auth: {
     user: process.env.BREVO_USER, 
     pass: process.env.BREVO_SMTP_KEY,
   },
   tls: {
-    rejectUnauthorized: false // Soluciona el error "Hostname/IP does not match"
-  }
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  ...mailConfig
 });
 
 // 2. Respaldo: GMAIL
 const transportGmail = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com', // Asegura el host correcto
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: 465,
-  secure: true,
+  secure: true, // SSL implícito
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // DEBE SER UNA "APP PASSWORD", NO TU CONTRASEÑA REAL
+    pass: process.env.EMAIL_PASS,
   },
+  ...mailConfig
 });
 
 // --- FUNCIÓN DE ENVÍO HÍBRIDO ---
 const enviarCorreoHibrido = async (opcionesEmail) => {
+  console.log(`📨 Iniciando envío de correo a: ${opcionesEmail.to}`);
+  
   try {
     // Intento 1: Brevo
-    console.log("🚀 Intentando enviar con Brevo...");
+    console.log("🚀 Intentando enviar con Brevo (Puerto 587)...");
     const info = await transportBrevo.sendMail(opcionesEmail);
     console.log("✅ Correo enviado con Brevo ID:", info.messageId);
     return info;
 
   } catch (error) {
-    console.error("⚠️ Falló Brevo:", error.message);
-    console.log("🔄 Cambiando a servidor de respaldo (Gmail)...");
+    console.error(`⚠️ Falló Brevo: ${error.message} (Code: ${error.code})`);
+    console.log("🔄 Cambiando a servidor de respaldo (Gmail Puerto 465)...");
 
     try {
       // Intento 2: Gmail (Respaldo)
@@ -50,8 +62,8 @@ const enviarCorreoHibrido = async (opcionesEmail) => {
 
     } catch (errorBackup) {
       console.error("❌ Fallaron ambos servidores de correo.");
-      console.error("Error Gmail:", errorBackup.message); // Imprimir el error real de Gmail
-      throw new Error("No se pudo enviar el email por ningún medio.");
+      console.error(`Error Gmail: ${errorBackup.message} (Code: ${errorBackup.code})`);
+      throw new Error("No se pudo enviar el email por ningún medio. Verifique conexión saliente.");
     }
   }
 };
@@ -64,7 +76,7 @@ export const emailRegistro = async (datos) => {
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
-  console.log(`🔗 Generando enlace de confirmación para: ${frontendUrl}`);
+  console.log(`🔗 Link generado: ${frontendUrl}/confirmar/${token}`);
 
   await enviarCorreoHibrido({
     from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
@@ -81,19 +93,19 @@ export const emailRegistro = async (datos) => {
 };
 
 export const emailOlvidePassword = async (datos) => {
-  const { email, nombre, token, rol } = datos; // ACEPTAMOS 'rol'
+  const { email, nombre, token, rol } = datos;
 
   // Determinar la URL del frontend basada en el entorno
   const frontendUrl = process.env.NODE_ENV === 'production' 
     ? process.env.URL_FRONTEND_PROD 
     : process.env.URL_FRONTEND_LOCAL;
 
-  console.log(`🔗 Generando enlace de recuperación para: ${frontendUrl}`);
-
   // Construimos la URL con el parámetro 'rol' si existe
   const enlace = rol 
     ? `${frontendUrl}/olvide-password/${token}?rol=${rol}`
     : `${frontendUrl}/olvide-password/${token}`;
+
+  console.log(`🔗 Link recuperación generado: ${enlace}`);
 
   await enviarCorreoHibrido({
     from: '"Agreenbyte - Administrador" <avproject049@gmail.com>',
