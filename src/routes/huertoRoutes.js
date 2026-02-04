@@ -1,26 +1,32 @@
-import express from 'express';
+import express from "express";
+const router = express.Router();
 import {
   agregarHuerto,
   obtenerHuertos,
   obtenerHuerto,
   actualizarHuerto,
   eliminarHuerto,
-  agregarAgricultor
-} from '../controllers/huertoController.js';
-import checkAuth from '../middleware/authMiddleware.js';
+  actualizarDatosSensores,
+  agregarAgricultor,
+  eliminarAgricultorDeHuerto
+} from "../controllers/huertoController.js";
+import checkAuth from "../middleware/authMiddleware.js";
 
-const router = express.Router();
+router
+  .route("/")
+  .post(checkAuth, agregarHuerto)
+  .get(checkAuth, obtenerHuertos);
 
-// Obtener todos los huertos y Crear uno nuevo
-router.get('/', checkAuth, obtenerHuertos);
-router.post('/', checkAuth, agregarHuerto);
+router
+  .route("/:id")
+  .get(checkAuth, obtenerHuerto)
+  .put(checkAuth, actualizarHuerto)
+  .delete(checkAuth, eliminarHuerto);
 
-// Operaciones sobre un huerto específico
-router.get('/:id', checkAuth, obtenerHuerto);
-router.put('/:id', checkAuth, actualizarHuerto);
-router.delete('/:id', checkAuth, eliminarHuerto);
+router.post("/sensor-data", actualizarDatosSensores);
 
-// Agregar agricultor a un huerto
-router.post('/agricultor/:id', checkAuth, agregarAgricultor);
+// Gestión de agricultores en huertos
+router.post("/agricultor/:id", checkAuth, agregarAgricultor);
+router.put("/remover-agricultor/:id", checkAuth, eliminarAgricultorDeHuerto);
 
 export default router;

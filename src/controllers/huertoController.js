@@ -177,7 +177,27 @@ const agregarAgricultor = async (req, res) => {
   res.json({ msg: 'Agricultor agregado correctamente' });
 };
 
+const eliminarAgricultorDeHuerto = async (req, res) => {
+    const { id } = req.params; // ID del Huerto
+    const { agricultorId } = req.body; // ID del Agricultor a desvincular
 
+    const huerto = await Huerto.findById(id);
+    if (!huerto) {
+        return res.status(404).json({ msg: 'Huerto no encontrado' });
+    }
+
+    if (huerto.administrador.toString() !== req.administrador._id.toString()) {
+        return res.status(403).json({ msg: 'Acción no válida: No eres el dueño' });
+    }
+
+    // Filtramos el array para excluir el ID del agricultor
+    huerto.agricultores = huerto.agricultores.filter(
+        agricultor => agricultor.toString() !== agricultorId
+    );
+
+    await huerto.save();
+    res.json({ msg: 'Agricultor desvinculado correctamente' });
+};
 
 export {
   agregarHuerto,
@@ -186,5 +206,6 @@ export {
   actualizarHuerto,
   eliminarHuerto,
   actualizarDatosSensores,
-  agregarAgricultor
+  agregarAgricultor,
+  eliminarAgricultorDeHuerto
 };
