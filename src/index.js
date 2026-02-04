@@ -1,91 +1,74 @@
 import express from 'express';
-import conectarDB from './config/db.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import conectarDB from './config/db.js';
+import administradorRoutes from './routes/administradorRoutes.js';
+import agricultorRoutes from './routes/agricultorRoutes.js';
+import huertoRoutes from './routes/huertoRoutes.js';
+import pagoRoutes from './routes/pagoRoutes.js'; // Nueva ruta de pagos
+import sensorRoutes from './routes/sensorRoutes.js';
+
+// Importaciones para Socket.io
 import http from 'http';
 import { Server } from 'socket.io';
 
-// Importación de rutas
-import administradorRoutes from './routes/administradorRoutes.js'; 
-import huertoRoutes from './routes/huertoRoutes.js';
-import agricultorRoutes from './routes/agricultorRoutes.js';
-import sensorRoutes from './routes/sensorRoutes.js'; 
-import pagoRoutes from './routes/pagoRoutes.js';
+const app = express();
+app.use(express.json());
 
-// Configura dotenv para cargar variables de entorno
 dotenv.config();
 
-// Configuración de URL del frontend según el entorno
-if (process.env.NODE_ENV === 'production') {
-    process.env.FRONTEND_URL = process.env.URL_FRONTEND_URL;
-} else {
-    process.env.FRONTEND_URL = process.env.URL_FRONTEND_LOCAL;
-}
+conectarDB();
 
-// Conectar a la base de datos
-conectarDB(); 
+const dominiosPermitidos = [process.env.URL_FRONTEND_LOCAL, process.env.URL_FRONTEND_PROD];
 
-// Crear la instancia de express
-const app = express();
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (dominiosPermitidos.indexOf(origin) !== -1 || !origin) { // !origin permite postman/mobile apps
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por CORS'));
+        }
+    },
+};
 
-// Crear el servidor HTTP a partir de la app de Express
+app.use(cors(corsOptions));
+
+// === CONFIGURACIÓN SOCKET.IO ===
 const server = http.createServer(app);
-
-// Configurar Socket.io
-/*const io = new Server(server, {
-    cors: {
-        origin: process.env.FRONTEND_URL || "*", // Permitimos el origen del frontend (apagado por pruebas de back)
-        methods: ["GET", "POST"],
-        credentials: true
-    }
-});*/
 const io = new Server(server, {
     cors: {
-        origin: "*", // Cambia esto temporalmente para la prueba
-        methods: ["GET", "POST"],
-        credentials: true
+        origin: process.env.FRONTEND_URL, // Debe coincidir con tu frontend (ej: http://localhost:5173)
+        methods: ["GET", "POST"]
     }
 });
 
-// Middleware Mágico: Compartir 'io' con los controladores
-// Esto permite que sensorController.js emita eventos aunque esté en otro archivo
+io.on("connection", (socket) => {
+    // console.log("Cliente conectado a Socket.io:", socket.id);
+    
+    // Aquí puedes añadir lógica de salas si quisieras privacidad por huerto
+    // socket.on('join_room', (huertoId) => socket.join(huertoId));
+    
+    socket.on("disconnect", () => {
+        // console.log("Cliente desconectado");
+    });
+});
+
+// Middleware para disponibilizar 'io' en los controladores
 app.use((req, res, next) => {
     req.io = io;
     next();
 });
 
-// Habilitar CORS (para las peticiones HTTP normales)
-app.use(cors());
+// Rutas
+app.use('/api/administradores', administradorRoutes);
+app.use('/api/agricultores', agricultorRoutes);
+app.use('/api/huertos', huertoRoutes);
+app.use('/api/pagos', pagoRoutes); // Usar la ruta de pagos
+app.use('/api/sensor', sensorRoutes);
 
-// Habilitar lectura de JSON
-app.use(express.json());
-
-// Definir el puerto
 const PORT = process.env.PORT || 4000;
 
-// --- DEFINICIÓN DE RUTAS ---
-app.use('/api/administradores', administradorRoutes); 
-app.use('/api/huertos', huertoRoutes); 
-app.use('/api/agricultores', agricultorRoutes);
-app.use('/api/sensores', sensorRoutes); 
-app.use('/api/pagos', pagoRoutes);
-
-// Ruta de prueba
-app.get('/', (req, res) => {
-  res.send('Backend Agreenbyte funcionando con WebSockets y TimeSeries 🚀');
-});
-
-// Eventos de conexión de Socket.io (Para ver en consola quién entra)
-io.on('connection', (socket) => {
-    console.log(`⚡ Cliente conectado al socket: ${socket.id}`);
-
-    socket.on('disconnect', () => {
-        console.log(`❌ Cliente desconectado: ${socket.id}`);
-    });
-});
-
-// Arrancar el servidor
-// IMPORTANTE: Usamos server.listen en lugar de app.listen
+// IMPORTANTE: Cambiamos app.listen por server.listen
 server.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

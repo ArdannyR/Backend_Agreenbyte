@@ -19,41 +19,67 @@ const agregarHuerto = async (req, res) => {
 };
 
 const obtenerHuertos = async (req, res) => {
+  let huertos = [];
+
   // CASO 1: Petición hecha por el DUEÑO (Administrador)
   if (req.administrador) {
-    const huertos = await Huerto.find().where('administrador').equals(req.administrador);
-    return res.json(huertos);
+    huertos = await Huerto.find().where('administrador').equals(req.administrador);
   }
-
   // CASO 2: Petición hecha por el AGRICULTOR
-  if (req.agricultor) {
+  else if (req.agricultor) {
     // Busca huertos donde mi ID de agricultor esté en la lista permitida
-    const huertos = await Huerto.find({
+    huertos = await Huerto.find({
       agricultores: { $in: [req.agricultor._id] }
     });
-    return res.json(huertos);
+  } else {
+    return res.json([]); // Si no es ninguno, retorna vacío
   }
-  
-  return res.json([]); // Si no es ninguno, retorna vacío
+
+  // === MOCK DATA (DATOS QUEMADOS) ===
+  // Si la DB no tiene datos de sensores (son 0 o null), inyectamos valores simulados
+  // para que el Dashboard no se vea vacío.
+  const huertosSimulados = huertos.map(huertoDoc => {
+      const h = huertoDoc.toObject(); // Convertimos a objeto plano JS para poder modificarlo
+      
+      if (!h.temperatura || h.temperatura === 0) {
+          // Generar Temp aleatoria entre 18 y 28
+          h.temperatura = (Math.random() * (28 - 18) + 18).toFixed(1); 
+      }
+      if (!h.humedad || h.humedad === 0) {
+          // Generar Humedad aleatoria entre 40 y 80
+          h.humedad = Math.floor(Math.random() * (80 - 40) + 40);
+      }
+      return h;
+  });
+
+  return res.json(huertosSimulados);
 };
 
 const obtenerHuerto = async (req, res) => {
   const { id } = req.params;
 
   if(id.match(/^[0-9a-fA-F]{24}$/)) {
-    const huerto = await Huerto.findById(id);
+    let huerto = await Huerto.findById(id);
 
     if (!huerto) {
       return res.status(404).json({ msg: 'Huerto no encontrado' });
     }
 
     // Validación de permisos: Verificar si es el dueño (Administrador)
-    // Nota: El agricultor no entra aquí según tu lógica original, o necesitaría un 'else if' si quieres que ellos también vean detalle
     if (huerto.administrador.toString() !== req.administrador._id.toString()) {
       return res.status(403).json({ msg: 'Acción no válida (No tienes permisos)' });
     }
 
-    res.json(huerto);
+    // === MOCK DATA para vista individual ===
+    const h = huerto.toObject();
+    if (!h.temperatura || h.temperatura === 0) {
+        h.temperatura = (Math.random() * (28 - 18) + 18).toFixed(1);
+    }
+    if (!h.humedad || h.humedad === 0) {
+        h.humedad = Math.floor(Math.random() * (80 - 40) + 40);
+    }
+
+    res.json(h);
   } else {
     return res.status(404).json({ msg: 'ID no válido' });
   }
